@@ -1,239 +1,29 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Flashcards de Inglês</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
-body {
-    margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    background: #f4f6f8;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
-
-.container {
-    width: 100%;
-    max-width: 420px;
-    padding: 20px;
-    text-align: center;
-}
-
-h1 {
-    margin-bottom: 10px;
-}
-
-.card {
-    width: 100%;
-    height: 240px;
-    perspective: 1000px;
-    cursor: pointer;
-    margin-bottom: 15px;
-}
-
-.card-inner {
-    width: 100%;
-    height: 100%;
-    transition: transform 0.6s;
-    transform-style: preserve-3d;
-}
-
-.card.flip .card-inner {
-    transform: rotateY(180deg);
-}
-
-.card-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    backface-visibility: hidden;
-}
-
-.front {
-    font-size: 32px;
-    font-weight: bold;
-}
-
-.back {
-    transform: rotateY(180deg);
-    flex-direction: column;
-    text-align: left;
-    font-size: 15px;
-}
-
 .controls {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 button {
-    flex: 1;
     padding: 10px;
     border: none;
     border-radius: 8px;
-    background: #2563eb;
+    background: #4CAF50;
     color: white;
+    font-size: 16px;
     cursor: pointer;
+    flex: 1 1 calc(50% - 20px);
+    max-width: 120px;
 }
 
 button:hover {
-    background: #1e40af;
+    background: #45a049;
 }
-
-.stats {
-    margin-top: 12px;
-    font-size: 13px;
-    color: #333;
-}
+.card {
+    margin-top: 15px;
+    flex: center;
+    align-items: }    
 </style>
-</head>
-
-<body>
-
-<div class="container">
-    <h1>Flashcards de Inglês</h1>
-
-    <div class="card" id="card" onclick="flipCard()">
-        <div class="card-inner">
-            <div class="card-face front" id="wordFront"></div>
-            <div class="card-face back">
-                <p><strong>Tradução:</strong> <span id="translation"></span></p>
-                <p><strong>Pronúncia:</strong> <span id="pronunciation"></span></p>
-                <p><strong>Exemplo:</strong> <span id="example"></span></p>
-            </div>
-        </div>
-    </div>
-
-    <div class="controls">
-        <button onclick="prevWord()">◀</button>
-        <button onclick="speak()">🔊</button>
-        <button onclick="toggleDifficult()">⭐</button>
-        <button onclick="nextWord()">▶</button>
-    </div>
-
-    <div class="stats" id="stats"></div>
-</div>
-
-<!-- FIREBASE + SCRIPT -->
-<script type="module">
-
-/* ================== FIREBASE ================== */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCJXzY7j0sdoUCzfwloS4YKp_XEylP25Ss",
-  authDomain: "ingles-flashcards-96274.firebaseapp.com",
-  projectId: "ingles-flashcards-96274",
-  storageBucket: "ingles-flashcards-96274.firebasestorage.app",
-  messagingSenderId: "699545668508",
-  appId: "1:699545668508:web:002bc1ec7e7c1761249659"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-/* ================== USUÁRIO ================== */
-const userId =
-  localStorage.getItem("userId") ||
-  (() => {
-    const id = crypto.randomUUID();
-    localStorage.setItem("userId", id);
-    return id;
-  })();
-
-const userRef = doc(db, "users", userId);
-
-/* ================== PALAVRAS ================== */
-const words = [
-  { word: "work", translation: "trabalho", pronunciation: "uôrk", example: "I work every day." },
-  { word: "learn", translation: "aprender", pronunciation: "lârn", example: "I learn English." },
-  { word: "house", translation: "casa", pronunciation: "ráus", example: "My house is big." },
-  { word: "food", translation: "comida", pronunciation: "fúd", example: "I like this food." }
-  // ➕ até 3000 palavras
-];
-
-/* ================== ESTADO ================== */
-let state = {
-    index: 0,
-    studied: 0,
-    difficult: []
-};
-
-/* ================== FUNÇÕES ================== */
-async function loadState() {
-    const snap = await getDoc(userRef);
-    if (snap.exists()) {
-        state = snap.data();
-    }
-    render();
-}
-
-async function saveState() {
-    await setDoc(userRef, state);
-}
-
-function render() {
-    const w = words[state.index % words.length];
-    document.getElementById("wordFront").innerText = w.word;
-    document.getElementById("translation").innerText = w.translation;
-    document.getElementById("pronunciation").innerText = w.pronunciation;
-    document.getElementById("example").innerText = w.example;
-
-    document.getElementById("stats").innerText =
-        `Estudadas: ${state.studied} | Difíceis: ${state.difficult.length}`;
-}
-
-window.flipCard = function () {
-    document.getElementById("card").classList.toggle("flip");
-};
-
-window.nextWord = function () {
-    state.index++;
-    state.studied++;
-    saveState();
-    render();
-};
-
-window.prevWord = function () {
-    state.index = Math.max(0, state.index - 1);
-    saveState();
-    render();
-};
-
-window.toggleDifficult = function () {
-    const word = words[state.index].word;
-    if (state.difficult.includes(word)) {
-        state.difficult = state.difficult.filter(w => w !== word);
-    } else {
-        state.difficult.push(word);
-    }
-    saveState();
-    render();
-};
-
-window.speak = function () {
-    const utter = new SpeechSynthesisUtterance(words[state.index].word);
-    utter.lang = "en-US";
-    speechSynthesis.speak(utter);
-};
-
-/* ================== START ================== */
-loadState();
-
-</script>
-
-</body>
-</html>
-
