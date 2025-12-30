@@ -1,122 +1,675 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartões de Memória</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .flashcards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-        .flashcard {
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            perspective: 1000px;
-            cursor: pointer;
-        }
-        .flashcard-inner {
-            position: relative;
-            width: 100%;
-            height: 200px;
-            text-align: center;
-            transform-style: preserve-3d;
-            transition: transform 0.6s;
-            border-radius: 10px;
-        }
-        .flashcard.flipped .flashcard-inner {
-            transform: rotateY(180deg);
-        }
-        .flashcard-front, .flashcard-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 10px;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        .flashcard-front {
-            background: #1E88E5;
-            color: white;
-            font-size: 1.5em;
-        }
-        .flashcard-back {
-            background: #E1F5FE;
-            color: #333;
-            transform: rotateY(180deg);
-            flex-direction: column;
-        }
-        .flashcard-back span {
-            margin: 5px 0;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Flashcards de Inglês</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+    --primary: #2563eb;
+    --secondary: #64748b;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --warning: #f59e0b;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 380px;
+    padding: 16px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #cbd5f5;
+    margin-bottom: 10px;
+}
+
+.progress {
+    font-size: 13px;
+    text-align: center;
+    color: var(--secondary);
+    margin-bottom: 8px;
+}
+
+.card {
+    width: 100%;
+    height: 280px;
+    perspective: 1200px;
+    cursor: pointer;
+}
+
+.card-inner {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.card.flip .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    inset: 0;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backface-visibility: hidden;
+}
+
+.front {
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.back {
+    transform: rotateY(180deg);
+    flex-direction: column;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+button {
+    padding: 10px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    cursor: pointer;
+    background: var(--primary);
+    color: #fff;
+}
+
+button.star {
+    background: var(--warning);
+}
+</style>
 </head>
 <body>
-    <main class="flashcards" id="flashcard-container"></main>
 
-    <script>
-        const flashcardsData = [
-            {
-                word: "Apple",
-                translation: "Maçã",
-                pronunciation: "ˈæpəl",
-                example: "I eat an apple every day."
-            },
-            {
-                word: "Table",
-                translation: "Mesa",
-                pronunciation: "ˈteɪbəl",
-                example: "The book is on the table."
-            },
-            {
-                word: "House",
-                translation: "Casa",
-                pronunciation: "haʊs",
-                example: "This is a beautiful house."
-            }
-        ];
+<div class="container">
+  <h1>Flashcards de Inglês</h1>
 
-        const container = document.getElementById('flashcard-container');
+  <select id="levelSelect" onchange="changeLevel()">
+    <option value="A1">A1</option>
+    <option value="A2">A2</option>
+    <option value="B1">B1</option>
+    <option value="B2">B2</option>
+  </select>
 
-        flashcardsData.forEach(card => {
-            const flashcard = document.createElement('div');
-            flashcard.classList.add('flashcard');
+  <div class="progress" id="levelCount"></div>
+  <div class="progress" id="progress"></div>
 
-            flashcard.innerHTML = `
-                <div class="flashcard-inner">
-                    <div class="flashcard-front">${card.word}</div>
-                    <div class="flashcard-back">
-                        <span><strong>Translation:</strong> ${card.translation}</span>
-                        <span><strong>Pronunciation:</strong> ${card.pronunciation}</span>
-                        <span><strong>Example:</strong> ${card.example}</span>
-                    </div>
-                </div>
-            `;
+  <div class="card" id="card" onclick="flipCard()">
+    <div class="card-inner">
+      <div class="card-face front" id="wordFront"></div>
+      <div class="card-face back">
+        <p><strong>Tradução:</strong> <span id="translation"></span></p>
+        <p><strong>Pronúncia:</strong> <span id="pronunciation"></span></p>
+        <p><strong>Exemplo:</strong> <span id="example"></span></p>
+      </div>
+    </div>
+  </div>
 
-            flashcard.addEventListener('click', () => {
-                flashcard.classList.toggle('flipped');
-            });
+  <div class="controls">
+    <button onclick="prevWord()">◀</button>
+    <button onclick="speak()">🔊</button>
+    <button class="star" onclick="toggleDifficult()">⭐</button>
+    <button onclick="nextWord()">▶</button>
+  </div>
+</div>
 
-            container.appendChild(flashcard);
-        });
-    </script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCJXzY7j0sdoUCzfwloS4YKp_XEylP25Ss",
+  authDomain: "ingles-flashcards-96274.firebaseapp.com",
+  projectId: "ingles-flashcards-96274",
+  storageBucket: "ingles-flashcards-96274.firebasestorage.app",
+  messagingSenderId: "699545668508",
+  appId: "1:699545668508:web:002bc1ec7e7c1761249659"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const userId = localStorage.getItem("userId") ?? crypto.randomUUID();
+localStorage.setItem("userId", userId);
+const userRef = doc(db, "users", userId);
+
+// ===== PALAVRAS A1 (estrutura corrigida) =====
+// ===== PALAVRAS A1 | BLOCO 1 (1–100) =====
+const wordsA1 = [
+  { word:"the", translation:"o, a, os, as", pronunciation:"dâ", example:"The house is big." },
+  { word:"be", translation:"ser / estar", pronunciation:"bí", example:"I want to be happy." },
+  { word:"and", translation:"e", pronunciation:"ênd", example:"I like coffee and tea." },
+  { word:"a", translation:"um / uma", pronunciation:"â", example:"I have a car." },
+  { word:"to", translation:"para", pronunciation:"tú", example:"I want to learn." },
+  { word:"have", translation:"ter", pronunciation:"hév", example:"I have time." },
+  { word:"I", translation:"eu", pronunciation:"ái", example:"I work here." },
+  { word:"it", translation:"isso / isto", pronunciation:"ít", example:"It is good." },
+  { word:"for", translation:"para", pronunciation:"fór", example:"This is for you." },
+  { word:"not", translation:"não", pronunciation:"nót", example:"I am not ready." },
+
+  { word:"on", translation:"em / sobre", pronunciation:"ón", example:"The book is on the table." },
+  { word:"with", translation:"com", pronunciation:"uíth", example:"I go with you." },
+  { word:"he", translation:"ele", pronunciation:"hí", example:"He is my friend." },
+  { word:"she", translation:"ela", pronunciation:"xí", example:"She is nice." },
+  { word:"you", translation:"você", pronunciation:"iú", example:"You are welcome." },
+  { word:"do", translation:"fazer", pronunciation:"dú", example:"I do my job." },
+  { word:"at", translation:"em", pronunciation:"ét", example:"She is at home." },
+  { word:"this", translation:"este / esta", pronunciation:"dís", example:"This is my house." },
+  { word:"but", translation:"mas", pronunciation:"bât", example:"I like it, but it is expensive." },
+  { word:"his", translation:"dele", pronunciation:"híz", example:"This is his car." },
+
+  { word:"by", translation:"por", pronunciation:"bái", example:"Sit by me." },
+  { word:"from", translation:"de", pronunciation:"fróm", example:"I am from Brazil." },
+  { word:"they", translation:"eles", pronunciation:"dhêi", example:"They are students." },
+  { word:"we", translation:"nós", pronunciation:"uí", example:"We work together." },
+  { word:"say", translation:"dizer", pronunciation:"sêi", example:"I say hello." },
+  { word:"her", translation:"ela / dela", pronunciation:"hâr", example:"This is her bag." },
+  { word:"or", translation:"ou", pronunciation:"ór", example:"Tea or coffee?" },
+  { word:"an", translation:"um / uma", pronunciation:"én", example:"I have an idea." },
+  { word:"will", translation:"vai", pronunciation:"uíl", example:"I will call you." },
+  { word:"my", translation:"meu", pronunciation:"mái", example:"My name is Ana." },
+
+  { word:"one", translation:"um", pronunciation:"uãn", example:"I have one sister." },
+  { word:"all", translation:"todos", pronunciation:"ól", example:"All people need food." },
+  { word:"would", translation:"iria", pronunciation:"uúd", example:"I would like water." },
+  { word:"there", translation:"lá", pronunciation:"dhér", example:"There is a problem." },
+  { word:"their", translation:"deles", pronunciation:"dhér", example:"Their house is new." },
+  { word:"what", translation:"o que", pronunciation:"uót", example:"What is your name?" },
+  { word:"so", translation:"então", pronunciation:"sôu", example:"I am tired, so I rest." },
+  { word:"up", translation:"para cima", pronunciation:"âp", example:"Stand up, please." },
+  { word:"out", translation:"fora", pronunciation:"áut", example:"Go out now." },
+  { word:"if", translation:"se", pronunciation:"íf", example:"If you want, come." },
+
+  { word:"about", translation:"sobre", pronunciation:"abáut", example:"Talk about work." },
+  { word:"who", translation:"quem", pronunciation:"rú", example:"Who is she?" },
+  { word:"get", translation:"pegar", pronunciation:"guét", example:"I get the bus." },
+  { word:"which", translation:"qual", pronunciation:"uítch", example:"Which one?" },
+  { word:"go", translation:"ir", pronunciation:"gôu", example:"I go to work." },
+  { word:"me", translation:"me", pronunciation:"mí", example:"Call me later." },
+  { word:"when", translation:"quando", pronunciation:"uén", example:"When do you work?" },
+  { word:"make", translation:"fazer", pronunciation:"mêik", example:"I make dinner." },
+  { word:"can", translation:"poder", pronunciation:"kén", example:"I can help you." },
+  { word:"like", translation:"gostar", pronunciation:"láik", example:"I like music." },
+
+  { word:"time", translation:"tempo", pronunciation:"táim", example:"I have time." },
+  { word:"no", translation:"não", pronunciation:"nôu", example:"No problem." },
+  { word:"just", translation:"apenas", pronunciation:"djâst", example:"Just a minute." },
+  { word:"him", translation:"ele", pronunciation:"hím", example:"Talk to him." },
+  { word:"know", translation:"saber", pronunciation:"nôu", example:"I know her." },
+  { word:"take", translation:"pegar", pronunciation:"têik", example:"Take this." },
+  { word:"people", translation:"pessoas", pronunciation:"pípol", example:"People are kind." },
+  { word:"into", translation:"dentro", pronunciation:"íntu", example:"Come into the room." },
+  { word:"year", translation:"ano", pronunciation:"iâr", example:"This year is good." },
+  { word:"learn", translation:"aprender", pronunciation:"lârn", example:"I learn fast." },
+
+  // ===== PALAVRAS A1 | BLOCO 2 (101–200) =====
+  { word:"day", translation:"dia", pronunciation:"dêi", example:"Today is a good day." },
+  { word:"night", translation:"noite", pronunciation:"náit", example:"Good night." },
+  { word:"morning", translation:"manhã", pronunciation:"mórnin", example:"Good morning." },
+  { word:"afternoon", translation:"tarde", pronunciation:"éftarnún", example:"Good afternoon." },
+  { word:"man", translation:"homem", pronunciation:"mén", example:"The man is tall." },
+  { word:"woman", translation:"mulher", pronunciation:"uúman", example:"The woman smiles." },
+  { word:"child", translation:"criança", pronunciation:"tcháild", example:"The child is happy." },
+  { word:"friend", translation:"amigo", pronunciation:"frénd", example:"She is my friend." },
+  { word:"family", translation:"família", pronunciation:"fámili", example:"My family is here." },
+  { word:"home", translation:"casa", pronunciation:"rôum", example:"I am home." },
+
+  { word:"house", translation:"casa", pronunciation:"háus", example:"The house is new." },
+  { word:"school", translation:"escola", pronunciation:"skúl", example:"The school is big." },
+  { word:"teacher", translation:"professor", pronunciation:"títchâr", example:"The teacher helps me." },
+  { word:"student", translation:"aluno", pronunciation:"stiúdant", example:"I am a student." },
+  { word:"class", translation:"aula", pronunciation:"kléss", example:"The class starts now." },
+  { word:"desk", translation:"mesa", pronunciation:"désk", example:"My desk is here." },
+  { word:"book", translation:"livro", pronunciation:"bûk", example:"This book is new." },
+  { word:"pen", translation:"caneta", pronunciation:"pén", example:"I have a pen." },
+  { word:"paper", translation:"papel", pronunciation:"pêipâr", example:"Write on paper." },
+
+  { word:"job", translation:"emprego", pronunciation:"djób", example:"I like my job." },
+  { word:"work", translation:"trabalho", pronunciation:"uôrk", example:"I go to work." },
+  { word:"office", translation:"escritório", pronunciation:"ófiss", example:"The office is big." },
+  { word:"company", translation:"empresa", pronunciation:"kâmpani", example:"The company grows." },
+  { word:"money", translation:"dinheiro", pronunciation:"mâni", example:"I need money." },
+  { word:"price", translation:"preço", pronunciation:"práis", example:"The price is high." },
+  { word:"cheap", translation:"barato", pronunciation:"tchíp", example:"This is cheap." },
+  { word:"expensive", translation:"caro", pronunciation:"ikspénsiv", example:"This is expensive." },
+  { word:"pay", translation:"pagar", pronunciation:"pêi", example:"I pay now." },
+  { word:"buy", translation:"comprar", pronunciation:"bái", example:"I buy food." },
+
+  { word:"food", translation:"comida", pronunciation:"fúd", example:"The food is good." },
+  { word:"water", translation:"água", pronunciation:"uórer", example:"Drink water." },
+  { word:"coffee", translation:"café", pronunciation:"kófi", example:"I drink coffee." },
+  { word:"tea", translation:"chá", pronunciation:"tí", example:"I like tea." },
+  { word:"bread", translation:"pão", pronunciation:"bréd", example:"I eat bread." },
+  { word:"milk", translation:"leite", pronunciation:"mílki", example:"I drink milk." },
+  { word:"meat", translation:"carne", pronunciation:"mít", example:"The meat is hot." },
+  { word:"rice", translation:"arroz", pronunciation:"ráis", example:"Rice is common." },
+  { word:"fruit", translation:"fruta", pronunciation:"frút", example:"Fruit is healthy." },
+  { word:"vegetable", translation:"legume", pronunciation:"védjitabl", example:"Vegetables are good." },
+
+  { word:"hungry", translation:"com fome", pronunciation:"hângri", example:"I am hungry." },
+  { word:"thirsty", translation:"com sede", pronunciation:"thârsti", example:"I am thirsty." },
+  { word:"happy", translation:"feliz", pronunciation:"répi", example:"I am happy." },
+  { word:"sad", translation:"triste", pronunciation:"séd", example:"She is sad." },
+  { word:"tired", translation:"cansado", pronunciation:"táierd", example:"I am tired." },
+  { word:"sick", translation:"doente", pronunciation:"sík", example:"I am sick." },
+  { word:"good", translation:"bom", pronunciation:"gúd", example:"This is good." },
+  { word:"bad", translation:"ruim", pronunciation:"béd", example:"This is bad." },
+  { word:"easy", translation:"fácil", pronunciation:"ízi", example:"This is easy." },
+  { word:"hard", translation:"difícil", pronunciation:"hárd", example:"This is hard." },
+
+  { word:"today", translation:"hoje", pronunciation:"tudêi", example:"Today is sunny." },
+  { word:"tomorrow", translation:"amanhã", pronunciation:"tumórrou", example:"Tomorrow I work." },
+  { word:"yesterday", translation:"ontem", pronunciation:"iéstârdei", example:"Yesterday was good." },
+  { word:"week", translation:"semana", pronunciation:"uíik", example:"This week is busy." },
+  { word:"month", translation:"mês", pronunciation:"mânth", example:"This month." },
+  { word:"year", translation:"ano", pronunciation:"iâr", example:"This year." },
+  { word:"always", translation:"sempre", pronunciation:"ólweiz", example:"I am always here." },
+  { word:"sometimes", translation:"às vezes", pronunciation:"sâmtaims", example:"Sometimes I cook." },
+  { word:"often", translation:"frequentemente", pronunciation:"ófen", example:"I often study." },
+  { word:"usually", translation:"geralmente", pronunciation:"iújuâli", example:"I usually work." },
+
+  // ===== PALAVRAS A1 | BLOCO 3 (201–300) =====
+  { word:"car", translation:"carro", pronunciation:"kár", example:"My car is red." },
+  { word:"bus", translation:"ônibus", pronunciation:"bâs", example:"I take the bus." },
+  { word:"train", translation:"trem", pronunciation:"trêin", example:"The train is fast." },
+  { word:"street", translation:"rua", pronunciation:"strít", example:"This street is long." },
+  { word:"road", translation:"estrada", pronunciation:"rôud", example:"The road is long." },
+  { word:"city", translation:"cidade", pronunciation:"síti", example:"My city is big." },
+  { word:"town", translation:"cidade pequena", pronunciation:"táun", example:"This town is quiet." },
+  { word:"country", translation:"país", pronunciation:"kântri", example:"I love my country." },
+  { word:"place", translation:"lugar", pronunciation:"plêis", example:"This is a nice place." },
+  { word:"area", translation:"área", pronunciation:"êria", example:"This area is safe." },
+
+  { word:"store", translation:"loja", pronunciation:"stór", example:"The store is open." },
+  { word:"shop", translation:"loja", pronunciation:"xóp", example:"The shop is small." },
+  { word:"market", translation:"mercado", pronunciation:"márkit", example:"Go to the market." },
+  { word:"supermarket", translation:"supermercado", pronunciation:"súper-márkit", example:"The supermarket is busy." },
+  { word:"restaurant", translation:"restaurante", pronunciation:"réstrant", example:"The restaurant is nice." },
+  { word:"bar", translation:"bar", pronunciation:"bár", example:"The bar is open." },
+  { word:"cafe", translation:"cafeteria", pronunciation:"kafé", example:"The cafe is cozy." },
+  { word:"hotel", translation:"hotel", pronunciation:"rôtél", example:"The hotel is nice." },
+  { word:"hostel", translation:"albergue", pronunciation:"róstel", example:"The hostel is cheap." },
+  { word:"airport", translation:"aeroporto", pronunciation:"érpórt", example:"The airport is far." },
+
+  { word:"station", translation:"estação", pronunciation:"stêichan", example:"The station is busy." },
+  { word:"stop", translation:"ponto / parar", pronunciation:"stóp", example:"The bus stop is there." },
+  { word:"corner", translation:"esquina", pronunciation:"kórner", example:"On the corner." },
+  { word:"center", translation:"centro", pronunciation:"sénter", example:"The city center." },
+  { word:"park", translation:"parque", pronunciation:"párk", example:"The park is green." },
+  { word:"square", translation:"praça", pronunciation:"skuér", example:"The square is full." },
+  { word:"bridge", translation:"ponte", pronunciation:"brídj", example:"Cross the bridge." },
+  { word:"river", translation:"rio", pronunciation:"rívâr", example:"The river is long." },
+  { word:"sea", translation:"mar", pronunciation:"sí", example:"The sea is blue." },
+  { word:"beach", translation:"praia", pronunciation:"bítch", example:"The beach is beautiful." },
+
+  { word:"mountain", translation:"montanha", pronunciation:"máunten", example:"The mountain is high." },
+  { word:"forest", translation:"floresta", pronunciation:"fórest", example:"The forest is big." },
+  { word:"island", translation:"ilha", pronunciation:"áiland", example:"The island is small." },
+  { word:"lake", translation:"lago", pronunciation:"lêik", example:"The lake is calm." },
+  { word:"building", translation:"prédio", pronunciation:"bíldin", example:"The building is tall." },
+  { word:"apartment", translation:"apartamento", pronunciation:"âpártment", example:"I live in an apartment." },
+  { word:"room", translation:"quarto", pronunciation:"rûm", example:"The room is clean." },
+  { word:"door", translation:"porta", pronunciation:"dór", example:"Open the door." },
+  { word:"window", translation:"janela", pronunciation:"uíndou", example:"Close the window." },
+  { word:"bathroom", translation:"banheiro", pronunciation:"báthrum", example:"The bathroom is here." },
+
+  { word:"bedroom", translation:"quarto", pronunciation:"béd-rum", example:"The bedroom is quiet." },
+  { word:"kitchen", translation:"cozinha", pronunciation:"kítchen", example:"The kitchen is clean." },
+  { word:"living", translation:"sala", pronunciation:"lívin", example:"The living room is big." },
+  { word:"floor", translation:"chão / andar", pronunciation:"flór", example:"The floor is clean." },
+  { word:"wall", translation:"parede", pronunciation:"uól", example:"The wall is white." },
+  { word:"roof", translation:"telhado", pronunciation:"rúf", example:"The roof is new." },
+  { word:"table", translation:"mesa", pronunciation:"têibol", example:"The table is big." },
+  { word:"chair", translation:"cadeira", pronunciation:"tchér", example:"The chair is broken." },
+  { word:"bed", translation:"cama", pronunciation:"béd", example:"The bed is comfortable." },
+  { word:"light", translation:"luz", pronunciation:"láit", example:"Turn on the light." },
+
+  { word:"dark", translation:"escuro", pronunciation:"dárk", example:"It is dark." },
+  { word:"clean", translation:"limpo", pronunciation:"klín", example:"The room is clean." },
+  { word:"dirty", translation:"sujo", pronunciation:"dârti", example:"The floor is dirty." },
+  { word:"open", translation:"aberto", pronunciation:"ôupen", example:"The store is open." },
+  { word:"closed", translation:"fechado", pronunciation:"klôuzd", example:"The shop is closed." },
+  { word:"near", translation:"perto", pronunciation:"níâr", example:"It is near." },
+  { word:"far", translation:"longe", pronunciation:"fár", example:"It is far." },
+  { word:"inside", translation:"dentro", pronunciation:"insáid", example:"Come inside." },
+  { word:"outside", translation:"fora", pronunciation:"áutsáid", example:"Stay outside." },
+
+  // ===== PALAVRAS A1 | BLOCO 4 (301–400) =====
+  { word:"read", translation:"ler", pronunciation:"ríd", example:"I read a book." },
+  { word:"write", translation:"escrever", pronunciation:"ráit", example:"I write my name." },
+  { word:"listen", translation:"ouvir", pronunciation:"lísen", example:"Listen to me." },
+  { word:"watch", translation:"assistir", pronunciation:"uótch", example:"I watch TV." },
+  { word:"speak", translation:"falar", pronunciation:"spík", example:"I speak English." },
+  { word:"eat", translation:"comer", pronunciation:"ít", example:"I eat lunch." },
+  { word:"drink", translation:"beber", pronunciation:"drínk", example:"I drink water." },
+  { word:"sleep", translation:"dormir", pronunciation:"slíp", example:"I sleep early." },
+  { word:"wake", translation:"acordar", pronunciation:"uêik", example:"I wake up early." },
+  { word:"open", translation:"abrir", pronunciation:"ôupen", example:"Open the door." },
+
+  { word:"close", translation:"fechar", pronunciation:"klôuz", example:"Close the door." },
+  { word:"start", translation:"começar", pronunciation:"stárt", example:"Start now." },
+  { word:"finish", translation:"terminar", pronunciation:"fínish", example:"Finish the work." },
+  { word:"play", translation:"brincar", pronunciation:"plêi", example:"Children play outside." },
+  { word:"run", translation:"correr", pronunciation:"rân", example:"I run every day." },
+  { word:"walk", translation:"andar", pronunciation:"uók", example:"I walk home." },
+  { word:"stop", translation:"parar", pronunciation:"stóp", example:"Stop here." },
+  { word:"sit", translation:"sentar", pronunciation:"sít", example:"Sit down, please." },
+  { word:"stand", translation:"ficar em pé", pronunciation:"sténd", example:"Stand up." },
+  { word:"wait", translation:"esperar", pronunciation:"uêit", example:"Wait a moment." },
+
+  { word:"work", translation:"trabalhar", pronunciation:"uôrk", example:"I work every day." },
+  { word:"study", translation:"estudar", pronunciation:"stâdi", example:"I study English." },
+  { word:"teach", translation:"ensinar", pronunciation:"títch", example:"Teachers teach students." },
+  { word:"help", translation:"ajudar", pronunciation:"hélp", example:"Help me please." },
+  { word:"try", translation:"tentar", pronunciation:"trái", example:"Try again." },
+  { word:"use", translation:"usar", pronunciation:"iús", example:"Use the computer." },
+  { word:"need", translation:"precisar", pronunciation:"níd", example:"I need water." },
+  { word:"want", translation:"querer", pronunciation:"uânt", example:"I want coffee." },
+  { word:"love", translation:"amar", pronunciation:"lâv", example:"I love my family." },
+  { word:"live", translation:"viver", pronunciation:"lív", example:"I live here." },
+
+  { word:"move", translation:"mudar", pronunciation:"múv", example:"I move tomorrow." },
+  { word:"travel", translation:"viajar", pronunciation:"trével", example:"I travel a lot." },
+  { word:"drive", translation:"dirigir", pronunciation:"dráiv", example:"I drive to work." },
+  { word:"arrive", translation:"chegar", pronunciation:"âráiv", example:"I arrive early." },
+  { word:"leave", translation:"sair", pronunciation:"lív", example:"I leave now." },
+  { word:"stay", translation:"ficar", pronunciation:"stêi", example:"Stay here." },
+  { word:"buy", translation:"comprar", pronunciation:"bái", example:"I buy bread." },
+  { word:"sell", translation:"vender", pronunciation:"sél", example:"They sell food." },
+  { word:"pay", translation:"pagar", pronunciation:"pêi", example:"I pay cash." },
+  { word:"save", translation:"economizar", pronunciation:"sêiv", example:"I save money." },
+
+  { word:"ask", translation:"perguntar", pronunciation:"ásk", example:"Ask a question." },
+  { word:"answer", translation:"responder", pronunciation:"ánsâr", example:"Answer me." },
+  { word:"call", translation:"ligar", pronunciation:"kól", example:"Call me later." },
+  { word:"meet", translation:"encontrar", pronunciation:"mít", example:"Meet me here." },
+  { word:"bring", translation:"trazer", pronunciation:"bríng", example:"Bring water." },
+  { word:"take", translation:"levar", pronunciation:"têik", example:"Take this." },
+  { word:"give", translation:"dar", pronunciation:"guív", example:"Give me that." },
+  { word:"find", translation:"encontrar", pronunciation:"fáind", example:"Find the key." },
+  { word:"lose", translation:"perder", pronunciation:"lúz", example:"I lose my phone." },
+  { word:"keep", translation:"manter", pronunciation:"kíp", example:"Keep calm." },
+
+  { word:"think", translation:"pensar", pronunciation:"thínk", example:"I think so." },
+  { word:"remember", translation:"lembrar", pronunciation:"rimémber", example:"Remember me." },
+  { word:"forget", translation:"esquecer", pronunciation:"forgét", example:"Forget it." },
+  { word:"understand", translation:"entender", pronunciation:"ândêrsténd", example:"I understand you." },
+  { word:"waiter", translation:"garçom", pronunciation:"uêiter", example:"The waiter helps us." },
+  { word:"customer", translation:"cliente", pronunciation:"kâstômâr", example:"The customer is happy." },
+  { word:"order", translation:"pedir", pronunciation:"órder", example:"I order food." },
+  { word:"cook", translation:"cozinhar", pronunciation:"kúk", example:"I cook dinner." },
+  { word:"clean", translation:"limpar", pronunciation:"klín", example:"I clean the house." },
+  { word:"wash", translation:"lavar", pronunciation:"uósh", example:"Wash your hands." },
+
+  // ===== PALAVRAS A1 | BLOCO 5 (401–500) =====
+  { word:"shirt", translation:"camisa", pronunciation:"shârt", example:"This shirt is blue." },
+  { word:"pants", translation:"calça", pronunciation:"pénts", example:"My pants are black." },
+  { word:"shoes", translation:"sapatos", pronunciation:"shúz", example:"My shoes are new." },
+  { word:"dress", translation:"vestido", pronunciation:"drés", example:"She wears a dress." },
+  { word:"hat", translation:"chapéu", pronunciation:"hét", example:"I wear a hat." },
+  { word:"bag", translation:"bolsa", pronunciation:"bég", example:"My bag is heavy." },
+  { word:"phone", translation:"telefone", pronunciation:"fôun", example:"My phone is here." },
+  { word:"computer", translation:"computador", pronunciation:"compiúter", example:"I use a computer." },
+  { word:"internet", translation:"internet", pronunciation:"íntârnét", example:"The internet is slow." },
+  { word:"email", translation:"e-mail", pronunciation:"ímêil", example:"Send an email." },
+
+  { word:"picture", translation:"foto", pronunciation:"píktchâr", example:"This picture is old." },
+  { word:"music", translation:"música", pronunciation:"miúzik", example:"I like music." },
+  { word:"movie", translation:"filme", pronunciation:"múvi", example:"The movie is good." },
+  { word:"newspaper", translation:"jornal", pronunciation:"niúspêipâr", example:"I read the newspaper." },
+  { word:"radio", translation:"rádio", pronunciation:"rêidiô", example:"The radio is on." },
+  { word:"tv", translation:"televisão", pronunciation:"tíví", example:"I watch TV." },
+  { word:"game", translation:"jogo", pronunciation:"gêim", example:"This game is fun." },
+  { word:"sport", translation:"esporte", pronunciation:"spórt", example:"I like sport." },
+  { word:"team", translation:"time", pronunciation:"tím", example:"My team wins." },
+  { word:"player", translation:"jogador", pronunciation:"plêiâr", example:"He is a player." },
+
+  { word:"color", translation:"cor", pronunciation:"kâlâr", example:"Blue is my favorite color." },
+  { word:"red", translation:"vermelho", pronunciation:"réd", example:"The car is red." },
+  { word:"blue", translation:"azul", pronunciation:"blú", example:"The sky is blue." },
+  { word:"green", translation:"verde", pronunciation:"grín", example:"Green is nice." },
+  { word:"yellow", translation:"amarelo", pronunciation:"iélou", example:"The sun is yellow." },
+  { word:"black", translation:"preto", pronunciation:"blék", example:"Black shoes." },
+  { word:"white", translation:"branco", pronunciation:"uáit", example:"The wall is white." },
+  { word:"brown", translation:"marrom", pronunciation:"bráun", example:"Brown bag." },
+  { word:"pink", translation:"rosa", pronunciation:"pínk", example:"Pink dress." },
+  { word:"gray", translation:"cinza", pronunciation:"gréi", example:"Gray car." },
+
+  { word:"number", translation:"número", pronunciation:"nâmbâr", example:"My number is one." },
+  { word:"first", translation:"primeiro", pronunciation:"fârst", example:"First time." },
+  { word:"second", translation:"segundo", pronunciation:"sékând", example:"Second place." },
+  { word:"third", translation:"terceiro", pronunciation:"thârd", example:"Third day." },
+  { word:"last", translation:"último", pronunciation:"lást", example:"Last day." },
+  { word:"many", translation:"muitos", pronunciation:"méni", example:"Many people." },
+  { word:"few", translation:"poucos", pronunciation:"fiú", example:"Few friends." },
+  { word:"more", translation:"mais", pronunciation:"mór", example:"I want more." },
+  { word:"less", translation:"menos", pronunciation:"lés", example:"Less sugar." },
+  { word:"same", translation:"mesmo", pronunciation:"sêim", example:"Same place." },
+
+  { word:"different", translation:"diferente", pronunciation:"dífârênt", example:"Different idea." },
+  { word:"right", translation:"direito / certo", pronunciation:"ráit", example:"Turn right." },
+  { word:"left", translation:"esquerdo", pronunciation:"léft", example:"Turn left." },
+  { word:"again", translation:"novamente", pronunciation:"âgên", example:"Try again." },
+  { word:"together", translation:"juntos", pronunciation:"tugéther", example:"We work together." },
+  { word:"alone", translation:"sozinho", pronunciation:"âlôun", example:"I am alone." }
+];
+
+// ===== PALAVRAS A2 | BLOCO 1 (1–100) =====
+const wordsA2 = [
+  { word:"because", translation:"porque", pronunciation:"bicóz", example:"I stayed home because it rained." },
+  { word:"before", translation:"antes", pronunciation:"bifór", example:"Wash your hands before dinner." },
+  { word:"after", translation:"depois", pronunciation:"éftâr", example:"After work, I rest." },
+  { word:"during", translation:"durante", pronunciation:"diúrin", example:"I studied during the night." },
+  { word:"while", translation:"enquanto", pronunciation:"uáil", example:"I listen to music while I work." },
+
+  { word:"again", translation:"novamente", pronunciation:"âgén", example:"Please say it again." },
+  { word:"already", translation:"já", pronunciation:"ólrêdi", example:"I already finished." },
+  { word:"still", translation:"ainda", pronunciation:"stíl", example:"I am still here." },
+  { word:"yet", translation:"ainda", pronunciation:"iét", example:"Not yet." },
+  { word:"soon", translation:"em breve", pronunciation:"sún", example:"See you soon." },
+
+  { word:"early", translation:"cedo", pronunciation:"ârli", example:"I wake up early." },
+  { word:"late", translation:"tarde", pronunciation:"lêit", example:"She arrived late." },
+  { word:"often", translation:"frequentemente", pronunciation:"ófen", example:"I often read." },
+  { word:"sometimes", translation:"às vezes", pronunciation:"sâmtaims", example:"Sometimes I cook." },
+  { word:"usually", translation:"geralmente", pronunciation:"iújuâli", example:"I usually work at home." },
+
+  { word:"different", translation:"diferente", pronunciation:"dífârênt", example:"This is different." },
+  { word:"same", translation:"igual", pronunciation:"sêim", example:"We have the same idea." },
+  { word:"easy", translation:"fácil", pronunciation:"ízi", example:"This test is easy." },
+  { word:"difficult", translation:"difícil", pronunciation:"dífikâlt", example:"English is difficult." },
+  { word:"possible", translation:"possível", pronunciation:"póssibâl", example:"It is possible." },
+
+  { word:"important", translation:"importante", pronunciation:"impórtant", example:"This is important." },
+  { word:"necessary", translation:"necessário", pronunciation:"nécéssâri", example:"It is necessary." },
+  { word:"free", translation:"livre / grátis", pronunciation:"frí", example:"I am free today." },
+  { word:"busy", translation:"ocupado", pronunciation:"bízi", example:"I am busy now." },
+  { word:"ready", translation:"pronto", pronunciation:"rédí", example:"I am ready." },
+
+  { word:"try", translation:"tentar", pronunciation:"trái", example:"Try again." },
+  { word:"decide", translation:"decidir", pronunciation:"disáid", example:"I decided to go." },
+  { word:"plan", translation:"planejar", pronunciation:"plén", example:"I plan my day." },
+  { word:"choose", translation:"escolher", pronunciation:"tchúz", example:"Choose one." },
+  { word:"agree", translation:"concordar", pronunciation:"âgrí", example:"I agree with you." },
+
+  { word:"disagree", translation:"discordar", pronunciation:"disâgrí", example:"I disagree." },
+  { word:"believe", translation:"acreditar", pronunciation:"bilív", example:"I believe you." },
+  { word:"hope", translation:"esperar", pronunciation:"rôup", example:"I hope so." },
+  { word:"feel", translation:"sentir", pronunciation:"fíl", example:"I feel good." },
+  { word:"seem", translation:"parecer", pronunciation:"sím", example:"It seems easy." },
+
+  { word:"happen", translation:"acontecer", pronunciation:"répen", example:"What happened?" },
+  { word:"change", translation:"mudar", pronunciation:"tchêindj", example:"Things change." },
+  { word:"improve", translation:"melhorar", pronunciation:"imprúv", example:"I want to improve." },
+  { word:"continue", translation:"continuar", pronunciation:"contíniu", example:"Continue studying." },
+  { word:"stop", translation:"parar", pronunciation:"stóp", example:"Stop talking." },
+
+  { word:"travel", translation:"viajar", pronunciation:"trávâl", example:"I like to travel." },
+  { word:"visit", translation:"visitar", pronunciation:"vízit", example:"I visit my family." },
+  { word:"arrive", translation:"chegar", pronunciation:"âráiv", example:"I arrive early." },
+  { word:"leave", translation:"sair", pronunciation:"lív", example:"I leave tomorrow." },
+  { word:"stay", translation:"ficar", pronunciation:"stêi", example:"I stay home." },
+
+  { word:"problem", translation:"problema", pronunciation:"próblêm", example:"There is a problem." },
+  { word:"solution", translation:"solução", pronunciation:"solúshân", example:"We found a solution." },
+  { word:"question", translation:"pergunta", pronunciation:"kuéstchan", example:"I have a question." },
+  { word:"answer", translation:"resposta", pronunciation:"ánsâr", example:"The answer is correct." },
+  { word:"example", translation:"exemplo", pronunciation:"igzémpâl", example:"This is an example." },
+
+  { word:"job", translation:"emprego", pronunciation:"djób", example:"I need a job." },
+  { word:"career", translation:"carreira", pronunciation:"caríâr", example:"She likes her career." },
+  { word:"experience", translation:"experiência", pronunciation:"ikspíriâns", example:"I have experience." },
+  { word:"skill", translation:"habilidade", pronunciation:"skíl", example:"This is an important skill." },
+  { word:"salary", translation:"salário", pronunciation:"sálâri", example:"The salary is good." },
+
+  { word:"health", translation:"saúde", pronunciation:"rélt", example:"Health is important." },
+  { word:"exercise", translation:"exercício", pronunciation:"ékssârsáiz", example:"I do exercise." },
+  { word:"diet", translation:"dieta", pronunciation:"dáiet", example:"I follow a diet." },
+  { word:"energy", translation:"energia", pronunciation:"énârgi", example:"I have energy." },
+  { word:"stress", translation:"estresse", pronunciation:"strés", example:"Stress is bad." },
+
+  // ===== PALAVRAS A2 | BLOCO 2 (101–200) =====
+  { word:"however", translation:"porém", pronunciation:"rauévâr", example:"I was tired; however, I finished." },
+  { word:"therefore", translation:"portanto", pronunciation:"dhérfór", example:"It rained; therefore, we stayed." },
+  { word:"although", translation:"embora", pronunciation:"ól-dhou", example:"Although tired, I worked." },
+  { word:"instead", translation:"em vez disso", pronunciation:"instéd", example:"Stay here instead." },
+  { word:"especially", translation:"especialmente", pronunciation:"ispéshâli", example:"Especially today." },
+
+  { word:"quite", translation:"bem / bastante", pronunciation:"kuáit", example:"It is quite easy." },
+  { word:"rather", translation:"em vez de / bastante", pronunciation:"rádher", example:"Rather stay home." },
+  { word:"enough", translation:"suficiente", pronunciation:"inâf", example:"It is enough." },
+  { word:"almost", translation:"quase", pronunciation:"ólmost", example:"Almost done." },
+  { word:"exactly", translation:"exatamente", pronunciation:"igzéktli", example:"Exactly right." },
+
+  { word:"likely", translation:"provável", pronunciation:"láikli", example:"It is likely." },
+  { word:"possible", translation:"possível", pronunciation:"póssibâl", example:"It is possible." },
+  { word:"available", translation:"disponível", pronunciation:"âvêilâbâl", example:"I am available." },
+  { word:"private", translation:"privado", pronunciation:"práivet", example:"Private message." },
+  { word:"public", translation:"público", pronunciation:"pâblik", example:"Public place." },
+
+  { word:"increase", translation:"aumentar", pronunciation:"inkrís", example:"Prices increase." },
+  { word:"reduce", translation:"reduzir", pronunciation:"ridíus", example:"Reduce costs." },
+  { word:"control", translation:"controlar", pronunciation:"contrôl", example:"Control expenses." },
+  { word:"manage", translation:"gerenciar", pronunciation:"ménâdj", example:"Manage time." },
+  { word:"develop", translation:"desenvolver", pronunciation:"divélâp", example:"Develop skills." },
+
+  { word:"create", translation:"criar", pronunciation:"kriêit", example:"Create a plan." },
+  { word:"build", translation:"construir", pronunciation:"bíld", example:"Build a house." },
+  { word:"fix", translation:"consertar", pronunciation:"fíks", example:"Fix the problem." },
+  { word:"improve", translation:"melhorar", pronunciation:"imprúv", example:"Improve results." },
+  { word:"support", translation:"apoiar", pronunciation:"sapórt", example:"Support the team." },
+
+  { word:"customer", translation:"cliente", pronunciation:"kâstômâr", example:"The customer complained." },
+  { word:"client", translation:"cliente", pronunciation:"kláiânt", example:"The client agreed." },
+  { word:"manager", translation:"gerente", pronunciation:"ménâdjer", example:"The manager decided." },
+  { word:"employee", translation:"funcionário", pronunciation:"emplôií", example:"The employee arrived." },
+  { word:"boss", translation:"chefe", pronunciation:"bós", example:"My boss called." },
+
+  { word:"meeting", translation:"reunião", pronunciation:"míting", example:"The meeting starts." },
+  { word:"project", translation:"projeto", pronunciation:"pródjékt", example:"The project ended." },
+  { word:"deadline", translation:"prazo", pronunciation:"dédláine", example:"Meet the deadline." },
+  { word:"task", translation:"tarefa", pronunciation:"tásk", example:"Finish the task." },
+  { word:"result", translation:"resultado", pronunciation:"rizâlt", example:"Good result." },
+
+  { word:"risk", translation:"risco", pronunciation:"rísk", example:"There is a risk." },
+  { word:"mistake", translation:"erro", pronunciation:"mistêik", example:"It was a mistake." },
+  { word:"success", translation:"sucesso", pronunciation:"sâksés", example:"Great success." },
+  { word:"failure", translation:"fracasso", pronunciation:"fêilior", example:"Learn from failure." },
+  { word:"progress", translation:"progresso", pronunciation:"prógress", example:"Good progress." }
+];
+
+const wordsByLevel = { A1: wordsA1, A2: wordsA2, B1: [], B2: [] };
+
+let state = { index: 0, studied: 0, difficult: [], level: "A1" };
+let currentWords = [];
+
+async function loadState() {
+  const snap = await getDoc(userRef);
+  if (snap.exists()) state = snap.data();
+  loadLevel(state.level);
+}
+
+async function saveState() {
+  await setDoc(userRef, state);
+}
+
+function loadLevel(level) {
+  state.level = level;
+  state.index = 0;
+  currentWords = wordsByLevel[level] || [];
+  saveState();
+  loadWord();
+}
+
+function loadWord() {
+  if (!currentWords.length) return;
+  const w = currentWords[state.index % currentWords.length];
+  wordFront.innerText = w.word;
+  translation.innerText = w.translation;
+  pronunciation.innerText = w.pronunciation;
+  example.innerText = w.example;
+  progress.innerText = `Nível ${state.level} | Estudadas: ${state.studied}`;
+  levelCount.innerText = `Palavras — A1: ${wordsA1.length} | A2: ${wordsA2.length}`;
+}
+
+function nextWord() { state.index++; state.studied++; saveState(); loadWord(); }
+function prevWord() { state.index = Math.max(0, state.index - 1); saveState(); loadWord(); }
+function flipCard() { card.classList.toggle("flip"); }
+function toggleDifficult() {}
+function changeLevel() { loadLevel(levelSelect.value); }
+function speak() {
+  if (!currentWords.length) return;
+  const u = new SpeechSynthesisUtterance(currentWords[state.index].word);
+  u.lang = "en-US";
+  speechSynthesis.speak(u);
+}
+
+window.nextWord = nextWord;
+window.prevWord = prevWord;
+window.flipCard = flipCard;
+window.toggleDifficult = toggleDifficult;
+window.changeLevel = changeLevel;
+window.speak = speak;
+
+loadState();
+</script>
 </body>
 </html>
