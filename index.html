@@ -1,17 +1,266 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Card Game</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<title>Flashcards de Inglês</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+    --primary: #2563eb;
+    --secondary: #64748b;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --warning: #f59e0b;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 380px;
+    padding: 16px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #cbd5f5;
+    margin-bottom: 10px;
+}
+
+.progress {
+    font-size: 13px;
+    text-align: center;
+    color: var(--secondary);
+    margin-bottom: 8px;
+}
+
+.card {
+    width: 100%;
+    height: 280px;
+    perspective: 1200px;
+    cursor: pointer;
+}
+
+.card-inner {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.card.flip .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    inset: 0;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backface-visibility: hidden;
+}
+
+.front {
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.back {
+    transform: rotateY(180deg);
+    flex-direction: column;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+button {
+    padding: 10px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    cursor: pointer;
+    background: var(--primary);
+    color: #fff;
+}
+
+button.star {
+    background: var(--warning);
+}
+</style>
 </head>
+
 <body>
-    <h1>Welcome to the Memory Card Game!</h1>
-    <div class="game-container">
-        <button class="game-button">Start Game</button>
-        <button class="game-button">Shuffle Cards</button>
+
+<div class="container">
+    <h1>Flashcards de Inglês</h1>
+
+    <select id="levelSelect" onchange="changeLevel()">
+        <option value="all">Todos os níveis</option>
+        <option value="A1">A1</option>
+        <option value="A2">A2</option>
+        <option value="B1">B1</option>
+        <option value="B2">B2</option>
+    </select>
+
+    <div class="progress" id="progress"></div>
+
+    <div class="card" id="card" onclick="flipCard()">
+        <div class="card-inner">
+            <div class="card-face front" id="wordFront"></div>
+            <div class="card-face back">
+                <p><strong>Tradução:</strong> <span id="translation"></span></p>
+                <p><strong>Pronúncia:</strong> <span id="pronunciation"></span></p>
+                <p><strong>Exemplo:</strong> <span id="example"></span></p>
+            </div>
+        </div>
     </div>
-    <script src="script.js"></script>
+
+    <div class="controls">
+        <button onclick="prevWord()">◀</button>
+        <button onclick="speak()">🔊</button>
+        <button class="star" onclick="toggleDifficult()">⭐</button>
+        <button onclick="nextWord()">▶</button>
+    </div>
+</div>
+
+<script type="module">
+
+/* ================= FIREBASE ================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCJXzY7j0sdoUCzfwloS4YKp_XEylP25Ss",
+  authDomain: "ingles-flashcards-96274.firebaseapp.com",
+  projectId: "ingles-flashcards-96274",
+  storageBucket: "ingles-flashcards-96274.firebasestorage.app",
+  messagingSenderId: "699545668508",
+  appId: "1:699545668508:web:002bc1ec7e7c1761249659"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ================= USUÁRIO ================= */
+const userId = localStorage.getItem("userId") ?? crypto.randomUUID();
+localStorage.setItem("userId", userId);
+const userRef = doc(db, "users", userId);
+
+/* ================= PALAVRAS ================= */
+/* ⬇️ AQUI você vai colar as 3000 palavras (em blocos) */
+const words = [
+  { word:"work", translation:"trabalho", pronunciation:"uôrk", example:"I work every day.", level:"A1" },
+  { word:"learn", translation:"aprender", pronunciation:"lârn", example:"I learn English.", level:"A1" },
+  { word:"decision", translation:"decisão", pronunciation:"dissíjan", example:"This is a decision.", level:"B1" }
+];
+
+/* ================= ESTADO ================= */
+let state = {
+  index: 0,
+  studied: 0,
+  difficult: [],
+  level: "all"
+};
+
+let filtered = [];
+
+/* ================= FUNÇÕES ================= */
+async function loadState() {
+  const snap = await getDoc(userRef);
+  if (snap.exists()) state = snap.data();
+  loadWord();
+}
+
+async function saveState() {
+  await setDoc(userRef, state);
+}
+
+function filterWords() {
+  filtered = words.filter(w =>
+    (state.level === "all" || w.level === state.level)
+  );
+}
+
+function loadWord() {
+  filterWords();
+  const w = filtered[state.index % filtered.length];
+  document.getElementById("wordFront").innerText = w.word;
+  document.getElementById("translation").innerText = w.translation;
+  document.getElementById("pronunciation").innerText = w.pronunciation;
+  document.getElementById("example").innerText = w.example;
+  document.getElementById("progress").innerText =
+    `Estudadas: ${state.studied} | Difíceis: ${state.difficult.length}`;
+}
+
+window.flipCard = () =>
+  document.getElementById("card").classList.toggle("flip");
+
+window.nextWord = () => {
+  state.index++;
+  state.studied++;
+  saveState();
+  loadWord();
+};
+
+window.prevWord = () => {
+  state.index = Math.max(0, state.index - 1);
+  saveState();
+  loadWord();
+};
+
+window.toggleDifficult = () => {
+  const w = filtered[state.index].word;
+  state.difficult.includes(w)
+    ? state.difficult = state.difficult.filter(x => x !== w)
+    : state.difficult.push(w);
+  saveState();
+  loadWord();
+};
+
+window.changeLevel = () => {
+  state.level = document.getElementById("levelSelect").value;
+  state.index = 0;
+  saveState();
+  loadWord();
+};
+
+window.speak = () => {
+  const u = new SpeechSynthesisUtterance(filtered[state.index].word);
+  u.lang = "en-US";
+  speechSynthesis.speak(u);
+};
+
+loadState();
+</script>
+
 </body>
 </html>
