@@ -115,6 +115,11 @@ button {
 button.star {
     background: var(--warning);
 }
+
+button.star.active {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+    filter: brightness(0.98);
+}
 </style>
 </head>
 <body>
@@ -152,31 +157,206 @@ button.star {
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+const levelSelect = document.getElementById("levelSelect");
+const wordFront = document.getElementById("wordFront");
+const translation = document.getElementById("translation");
+const pronunciation = document.getElementById("pronunciation");
+const example = document.getElementById("example");
+const progress = document.getElementById("progress");
+const levelCount = document.getElementById("levelCount");
+const card = document.getElementById("card");
+const starButton = document.querySelector("button.star");
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCJXzY7j0sdoUCzfwloS4YKp_XEylP25Ss",
-  authDomain: "ingles-flashcards-96274.firebaseapp.com",
-  projectId: "ingles-flashcards-96274",
-  storageBucket: "ingles-flashcards-96274.firebasestorage.app",
-  messagingSenderId: "699545668508",
-  appId: "1:699545668508:web:002bc1ec7e7c1761249659"
+const wordsByLevel = {
+  A1: [
+    { word: "hello", translation: "olá", pronunciation: "helôu", example: "Hello, how are you?" },
+    { word: "please", translation: "por favor", pronunciation: "plíiz", example: "Please close the door." },
+    { word: "thank you", translation: "obrigado", pronunciation: "thénk iú", example: "Thank you for your help." },
+    { word: "sorry", translation: "desculpe", pronunciation: "sóri", example: "Sorry, I am late." },
+    { word: "water", translation: "água", pronunciation: "uóter", example: "I need some water." },
+    { word: "food", translation: "comida", pronunciation: "fúud", example: "The food is delicious." },
+    { word: "friend", translation: "amigo", pronunciation: "frénd", example: "She is my best friend." },
+    { word: "family", translation: "família", pronunciation: "fémili", example: "My family is big." }
+  ],
+  A2: [
+    { word: "always", translation: "sempre", pronunciation: "ól-ueiz", example: "I always wake up early." },
+    { word: "usually", translation: "geralmente", pronunciation: "iújuli", example: "He usually walks to work." },
+    { word: "sometimes", translation: "às vezes", pronunciation: "sâmtaimz", example: "We sometimes eat out." },
+    { word: "because", translation: "porque", pronunciation: "bikóz", example: "She is late because of traffic." },
+    { word: "travel", translation: "viajar", pronunciation: "trável", example: "They love to travel together." },
+    { word: "important", translation: "importante", pronunciation: "impórtant", example: "Breakfast is important." },
+    { word: "practice", translation: "praticar", pronunciation: "prék-tis", example: "Practice makes perfect." },
+    { word: "weather", translation: "tempo/clima", pronunciation: "uéther", example: "The weather is warm today." }
+  ],
+  B1: [
+    { word: "achieve", translation: "alcançar", pronunciation: "achíiv", example: "She achieved her goals." },
+    { word: "challenge", translation: "desafio", pronunciation: "tchélen dge", example: "This is a difficult challenge." },
+    { word: "experience", translation: "experiência", pronunciation: "ikspíriens", example: "He shared his experience." },
+    { word: "ability", translation: "habilidade", pronunciation: "abíliti", example: "She has the ability to lead." },
+    { word: "advice", translation: "conselho", pronunciation: "adváis", example: "He gave me good advice." },
+    { word: "career", translation: "carreira", pronunciation: "karríer", example: "She wants a career in law." },
+    { word: "community", translation: "comunidade", pronunciation: "komiú-niti", example: "Our community is friendly." },
+    { word: "environment", translation: "meio ambiente", pronunciation: "inváironment", example: "We must protect the environment." },
+    { word: "improve", translation: "melhorar", pronunciation: "imprúv", example: "Practice helps you improve." },
+    { word: "issue", translation: "questão/problema", pronunciation: "íshiu", example: "This is a serious issue." },
+    { word: "purpose", translation: "propósito", pronunciation: "pârpôs", example: "What is the purpose of this?" },
+    { word: "progress", translation: "progresso", pronunciation: "prógress", example: "You made great progress." },
+    { word: "require", translation: "exigir", pronunciation: "ruicwáier", example: "This job requires patience." },
+    { word: "support", translation: "apoio", pronunciation: "supórt", example: "Thank you for your support." },
+    { word: "volunteer", translation: "voluntário", pronunciation: "vólan-tier", example: "She volunteers on weekends." }
+  ],
+  B2: [
+    { word: "approach", translation: "abordagem", pronunciation: "aprôutch", example: "We need a new approach." },
+    { word: "assume", translation: "assumir", pronunciation: "assúm", example: "Don't assume the result." },
+    { word: "awareness", translation: "consciência", pronunciation: "auérness", example: "They raised awareness about recycling." },
+    { word: "circumstance", translation: "circunstância", pronunciation: "sârcum-stans", example: "Under these circumstances we must wait." },
+    { word: "commitment", translation: "compromisso", pronunciation: "comítment", example: "Her commitment is impressive." },
+    { word: "consequence", translation: "consequência", pronunciation: "kónse-kuens", example: "Every action has a consequence." },
+    { word: "despite", translation: "apesar de", pronunciation: "dispáit", example: "Despite the rain, we went out." },
+    { word: "estimate", translation: "estimativa", pronunciation: "éstimêt", example: "Can you estimate the cost?" },
+    { word: "feature", translation: "característica", pronunciation: "fítchar", example: "This phone has a new feature." },
+    { word: "maintain", translation: "manter", pronunciation: "meintêin", example: "It's hard to maintain focus." },
+    { word: "priority", translation: "prioridade", pronunciation: "praiôrâti", example: "Safety is our priority." },
+    { word: "reliable", translation: "confiável", pronunciation: "riláiâbol", example: "He is a reliable coworker." },
+    { word: "significant", translation: "significativo", pronunciation: "signífécant", example: "There was a significant change." },
+    { word: "strategy", translation: "estratégia", pronunciation: "strátédi", example: "We discussed the new strategy." },
+    { word: "sustainable", translation: "sustentável", pronunciation: "sustêinabol", example: "We need sustainable energy." },
+    { word: "trend", translation: "tendência", pronunciation: "trénd", example: "This is a global trend." }
+  ]
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const savedState = JSON.parse(localStorage.getItem("flashcardState") || "{}");
+let positions = savedState.positions ?? {};
+let difficult = savedState.difficult ?? {};
 
-const userId = localStorage.getItem("userId") ?? crypto.randomUUID();
-localStorage.setItem("userId", userId);
-const userRef = doc(db, "users", userId);
+let currentLevel = levelSelect.value;
+if (savedState.level && wordsByLevel[savedState.level]) {
+  currentLevel = savedState.level;
+  levelSelect.value = currentLevel;
+}
 
-const wordsB1 = [
-  { word: "achieve", translation: "alcançar", pronunciation: "achíiv", example: "She achieved her goals." },
-  { word: "challenge", translation: "desafio", pronunciation: "tchélen dge", example: "This is a difficult challenge." },
-  { word: "experience", translation: "experiência", pronunciation: "ikspíriens", example: "He shared his experience." }
-]
-const wordsByLevel =   { A1:  "b.” }}...
+let currentIndex = positions[currentLevel] ?? 0;
+
+function persist() {
+  localStorage.setItem(
+    "flashcardState",
+    JSON.stringify({ level: currentLevel, positions, difficult })
+  );
+}
+
+function getWords() {
+  return wordsByLevel[currentLevel];
+}
+
+function getCurrentWord() {
+  const list = getWords();
+  if (!list.length) return null;
+  if (currentIndex >= list.length) currentIndex = 0;
+  return list[currentIndex];
+}
+
+function updateProgress() {
+  const total = getWords().length;
+  levelCount.textContent = `${total} palavras no nível ${currentLevel}`;
+  progress.textContent = `Carta ${currentIndex + 1} de ${total}`;
+}
+
+function isDifficult(wordText) {
+  const set = difficult[currentLevel] ?? [];
+  return set.includes(wordText);
+}
+
+function renderCard() {
+  const word = getCurrentWord();
+  if (!word) return;
+  wordFront.textContent = word.word;
+  translation.textContent = word.translation;
+  pronunciation.textContent = word.pronunciation;
+  example.textContent = word.example;
+  starButton.classList.toggle("active", isDifficult(word.word));
+  updateProgress();
+}
+
+function resetFlip() {
+  card.classList.remove("flip");
+}
+
+function nextWord() {
+  const total = getWords().length;
+  currentIndex = (currentIndex + 1) % total;
+  positions[currentLevel] = currentIndex;
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function prevWord() {
+  const total = getWords().length;
+  currentIndex = (currentIndex - 1 + total) % total;
+  positions[currentLevel] = currentIndex;
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function speak() {
+  const word = getCurrentWord();
+  if (!word || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(word.word);
+  utterance.lang = "en-US";
+  speechSynthesis.speak(utterance);
+}
+
+function toggleDifficult() {
+  const word = getCurrentWord();
+  if (!word) return;
+  const list = difficult[currentLevel] ?? [];
+  const index = list.indexOf(word.word);
+  if (index >= 0) {
+    list.splice(index, 1);
+  } else {
+    list.push(word.word);
+  }
+  difficult[currentLevel] = list;
+  persist();
+  renderCard();
+}
+
+function changeLevel() {
+  currentLevel = levelSelect.value;
+  const total = getWords().length;
+  currentIndex = positions[currentLevel] ?? 0;
+  if (currentIndex >= total) currentIndex = 0;
+  positions[currentLevel] = currentIndex;
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function flipCard() {
+  card.classList.toggle("flip");
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowRight") {
+    nextWord();
+  } else if (event.key === "ArrowLeft") {
+    prevWord();
+  } else if (event.key === " ") {
+    event.preventDefault();
+    flipCard();
+  }
+});
+
+renderCard();
+
+window.nextWord = nextWord;
+window.prevWord = prevWord;
+window.flipCard = flipCard;
+window.changeLevel = changeLevel;
+window.toggleDifficult = toggleDifficult;
+window.speak = speak;
 </script>
   </body>
 </html>
