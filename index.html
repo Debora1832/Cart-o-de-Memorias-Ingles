@@ -127,6 +127,12 @@ button.star.active {
 <div class="container">
   <h1>Flashcards de Inglês</h1>
 
+  <select id="modeSelect" onchange="changeMode()">
+    <option value="levels">Estudo (A1-B2)</option>
+    <option value="review">Revisão diária (até 10 difíceis)</option>
+    <option value="work">Área de Trabalho</option>
+  </select>
+
   <select id="levelSelect" onchange="changeLevel()">
     <option value="A1">A1</option>
     <option value="A2">A2</option>
@@ -158,6 +164,7 @@ button.star.active {
 
 <script type="module">
 const levelSelect = document.getElementById("levelSelect");
+const modeSelect = document.getElementById("modeSelect");
 const wordFront = document.getElementById("wordFront");
 const translation = document.getElementById("translation");
 const pronunciation = document.getElementById("pronunciation");
@@ -166,6 +173,40 @@ const progress = document.getElementById("progress");
 const levelCount = document.getElementById("levelCount");
 const card = document.getElementById("card");
 const starButton = document.querySelector("button.star");
+
+const workWords = [
+  { word: "work", translation: "trabalho", pronunciation: "uârk", example: "I work every day." },
+  { word: "job", translation: "emprego", pronunciation: "djób", example: "I like my job." },
+  { word: "task", translation: "tarefa", pronunciation: "tássk", example: "This task is easy." },
+  { word: "role", translation: "função / papel", pronunciation: "rôul", example: "This is my role." },
+  { word: "responsibility", translation: "responsabilidade", pronunciation: "risponsâbílit", example: "This is my responsibility." },
+  { word: "schedule", translation: "agenda / cronograma", pronunciation: "skédjul", example: "Check the schedule." },
+  { word: "priority", translation: "prioridade", pronunciation: "praióriri", example: "This is a priority." },
+  { word: "meeting", translation: "reunião", pronunciation: "míting", example: "We have a meeting." },
+  { word: "report", translation: "relatório", pronunciation: "ripórt", example: "Send the report." },
+  { word: "performance", translation: "desempenho", pronunciation: "perfólmans", example: "Good performance." },
+  { word: "productivity", translation: "produtividade", pronunciation: "prodâktíviti", example: "Increase productivity." },
+  { word: "procedure", translation: "procedimento", pronunciation: "prossídjur", example: "Follow the procedure." },
+  { word: "inspection", translation: "inspeção", pronunciation: "inspékshan", example: "Final inspection." },
+  { word: "approval", translation: "aprovação", pronunciation: "aprúval", example: "Waiting for approval." },
+  { word: "rejection", translation: "rejeição", pronunciation: "ridjékshan", example: "Product rejection." },
+  { word: "correction", translation: "correção", pronunciation: "korékshan", example: "Make a correction." },
+  { word: "quality", translation: "qualidade", pronunciation: "kuó-lâti", example: "Quality control is essential." },
+  { word: "audit", translation: "auditoria", pronunciation: "ódit", example: "We have an internal audit tomorrow." },
+  { word: "standard", translation: "padrão", pronunciation: "stándârd", example: "Follow the ISO standard." },
+  { word: "process", translation: "processo", pronunciation: "prócés", example: "Document the process steps." },
+  { word: "improvement", translation: "melhoria", pronunciation: "imprúv-mânt", example: "Continuous improvement matters." },
+  { word: "risk", translation: "risco", pronunciation: "rísk", example: "Assess the risk before approving." },
+  { word: "compliance", translation: "conformidade", pronunciation: "kâmpláiâns", example: "Compliance is mandatory." },
+  { word: "deadline", translation: "prazo", pronunciation: "déd-lain", example: "Meet the project deadline." },
+  { word: "milestone", translation: "marco", pronunciation: "máilstoun", example: "We reached a key milestone." },
+  { word: "stakeholder", translation: "parte interessada", pronunciation: "stêik-hóuldâr", example: "Engage every stakeholder." },
+  { word: "efficiency", translation: "eficiência", pronunciation: "ifíshiânsi", example: "Increase operational efficiency." },
+  { word: "specification", translation: "especificação", pronunciation: "spécifikêishân", example: "Review the product specification." },
+  { word: "prototype", translation: "protótipo", pronunciation: "próutôtáip", example: "Build a prototype first." },
+  { word: "engineering", translation: "engenharia", pronunciation: "éndjiníâring", example: "Engineering approved the change." },
+  { word: "reliability", translation: "confiabilidade", pronunciation: "rilaiâbílití", example: "Reliability tests passed." }
+];
 
 const wordsByLevel = {
   A1: [
@@ -358,6 +399,8 @@ const wordsByLevel = {
 const savedState = JSON.parse(localStorage.getItem("flashcardState") || "{}");
 let positions = savedState.positions ?? {};
 let difficult = savedState.difficult ?? {};
+let reviewState = savedState.reviewState ?? null;
+let currentMode = savedState.mode ?? "levels";
 
 let currentLevel = levelSelect.value;
 if (savedState.level && wordsByLevel[savedState.level]) {
@@ -367,14 +410,23 @@ if (savedState.level && wordsByLevel[savedState.level]) {
 
 let currentIndex = positions[currentLevel] ?? 0;
 
+if (!["levels", "review", "work"].includes(currentMode)) currentMode = "levels";
+document.getElementById("modeSelect").value = currentMode;
+levelSelect.style.display = currentMode === "levels" ? "block" : "none";
+if (currentMode !== "levels") {
+  currentIndex = positions[currentMode] ?? 0;
+}
+
 function persist() {
   localStorage.setItem(
     "flashcardState",
-    JSON.stringify({ level: currentLevel, positions, difficult })
+    JSON.stringify({ level: currentLevel, positions, difficult, mode: currentMode, reviewState })
   );
 }
 
 function getWords() {
+  if (currentMode === "review") return getReviewDeck();
+  if (currentMode === "work") return workWords;
   return wordsByLevel[currentLevel];
 }
 
@@ -387,8 +439,14 @@ function getCurrentWord() {
 
 function updateProgress() {
   const total = getWords().length;
-  levelCount.textContent = `${total} palavras no nível ${currentLevel}`;
-  progress.textContent = `Carta ${currentIndex + 1} de ${total}`;
+  if (currentMode === "review") {
+    levelCount.textContent = `${total} cartões de revisão (difíceis, máx. 10/dia)`;
+  } else if (currentMode === "work") {
+    levelCount.textContent = `${total} cartões - Área de Trabalho`;
+  } else {
+    levelCount.textContent = `${total} palavras no nível ${currentLevel}`;
+  }
+  progress.textContent = total ? `Carta ${currentIndex + 1} de ${total}` : "Nenhum cartão disponível";
 }
 
 function isDifficult(wordText) {
@@ -403,7 +461,8 @@ function renderCard() {
   translation.textContent = word.translation;
   pronunciation.textContent = word.pronunciation;
   example.textContent = word.example;
-  starButton.classList.toggle("active", isDifficult(word.word));
+  starButton.disabled = currentMode !== "levels";
+  starButton.classList.toggle("active", currentMode === "levels" && isDifficult(word.word));
   updateProgress();
 }
 
@@ -413,8 +472,9 @@ function resetFlip() {
 
 function nextWord() {
   const total = getWords().length;
+  if (!total) return;
   currentIndex = (currentIndex + 1) % total;
-  positions[currentLevel] = currentIndex;
+  positions[getPositionKey()] = currentIndex;
   persist();
   resetFlip();
   renderCard();
@@ -422,8 +482,9 @@ function nextWord() {
 
 function prevWord() {
   const total = getWords().length;
+  if (!total) return;
   currentIndex = (currentIndex - 1 + total) % total;
-  positions[currentLevel] = currentIndex;
+  positions[getPositionKey()] = currentIndex;
   persist();
   resetFlip();
   renderCard();
@@ -441,6 +502,7 @@ function speak() {
 function toggleDifficult() {
   const word = getCurrentWord();
   if (!word) return;
+  if (currentMode !== "levels") return;
   const list = difficult[currentLevel] ?? [];
   const index = list.indexOf(word.word);
   if (index >= 0) {
@@ -456,12 +518,66 @@ function toggleDifficult() {
 function changeLevel() {
   currentLevel = levelSelect.value;
   const total = getWords().length;
-  currentIndex = positions[currentLevel] ?? 0;
+  currentIndex = positions[getPositionKey()] ?? 0;
   if (currentIndex >= total) currentIndex = 0;
-  positions[currentLevel] = currentIndex;
+  positions[getPositionKey()] = currentIndex;
   persist();
   resetFlip();
   renderCard();
+}
+
+function changeMode() {
+  currentMode = modeSelect.value;
+  levelSelect.style.display = currentMode === "levels" ? "block" : "none";
+  if (currentMode === "levels") {
+    currentIndex = positions[currentLevel] ?? 0;
+  } else {
+    currentIndex = positions[getPositionKey()] ?? 0;
+  }
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function getPositionKey() {
+  return currentMode === "levels" ? currentLevel : currentMode;
+}
+
+function findWord(level, wordText) {
+  const list = wordsByLevel[level] ?? [];
+  return list.find((w) => w.word === wordText);
+}
+
+function getReviewDeck() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (reviewState?.date === today && Array.isArray(reviewState.items)) {
+    return reviewState.items
+      .map((item) => findWord(item.level, item.word))
+      .filter(Boolean);
+  }
+
+  const gathered = [];
+  Object.keys(difficult).forEach((level) => {
+    (difficult[level] ?? []).forEach((wordText) => {
+      const match = findWord(level, wordText);
+      if (match) gathered.push({ level, word: wordText });
+    });
+  });
+
+  const seen = new Set();
+  const unique = [];
+  for (const entry of gathered) {
+    const key = `${entry.level}|${entry.word}`;
+    if (!seen.has(key)) {
+      unique.push(entry);
+      seen.add(key);
+    }
+  }
+
+  const limited = unique.slice(0, 10);
+  reviewState = { date: today, items: limited };
+  persist();
+  return limited.map((item) => findWord(item.level, item.word)).filter(Boolean);
 }
 
 function flipCard() {
@@ -487,6 +603,7 @@ window.flipCard = flipCard;
 window.changeLevel = changeLevel;
 window.toggleDifficult = toggleDifficult;
 window.speak = speak;
+window.changeMode = changeMode;
 </script>
   </body>
 </html>
