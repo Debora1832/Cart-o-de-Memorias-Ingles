@@ -1,42 +1,609 @@
-<!-- This is the updated index.html file. Sample JSON arrays are included inline for the respective sections. -->
-
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Card Game - Vocabulary Builder</title>
+<meta charset="UTF-8">
+<title>Flashcards de Inglês</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+    --primary: #2563eb;
+    --secondary: #64748b;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --warning: #f59e0b;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 380px;
+    padding: 16px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #cbd5f5;
+    margin-bottom: 10px;
+}
+
+.progress {
+    font-size: 13px;
+    text-align: center;
+    color: var(--secondary);
+    margin-bottom: 8px;
+}
+
+.card {
+    width: 100%;
+    height: 280px;
+    perspective: 1200px;
+    cursor: pointer;
+}
+
+.card-inner {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.card.flip .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    inset: 0;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backface-visibility: hidden;
+}
+
+.front {
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.back {
+    transform: rotateY(180deg);
+    flex-direction: column;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+button {
+    padding: 10px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    cursor: pointer;
+    background: var(--primary);
+    color: #fff;
+}
+
+button.star {
+    background: var(--warning);
+}
+
+button.star.active {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+    filter: brightness(0.98);
+}
+</style>
 </head>
-
 <body>
-    <h1>Welcome to the Memory Card Game</h1>
 
-    <script>
-        // Initializing JSON-like data inline in sections
+<div class="container">
+  <h1>Flashcards de Inglês</h1>
 
-        const B1Words = [
-            { "word": "accomplish", "definition": "achieve or complete successfully" },
-            { "word": "challenge", "definition": "a task or situation that tests someone's abilities" },
-            { "word": "explore", "definition": "travel through an unfamiliar area to learn about it" }
-        ];
+  <select id="modeSelect" onchange="changeMode()">
+    <option value="levels">Estudo (A1-B2)</option>
+    <option value="review">Revisão diária (até 10 difíceis)</option>
+    <option value="work">Área de Trabalho</option>
+  </select>
 
-        const A2Words = [
-            { "word": "apple", "definition": "a round fruit with red, green, or yellow skin" },
-            { "word": "banana", "definition": "a long, curved fruit with a yellow skin" },
-            { "word": "cat", "definition": "a small domesticated carnivorous mammal with soft fur" }
-        ];
+  <select id="levelSelect" onchange="changeLevel()">
+    <option value="A1">A1</option>
+    <option value="A2">A2</option>
+    <option value="B1">B1</option>
+    <option value="B2">B2</option>
+  </select>
 
-        const ProfessionalWords = [
-            { "word": "synergy", "definition": "the interaction of elements that when combined produce a total effect greater than the sum of the individual elements" },
-            { "word": "leverage", "definition": "use something to its maximum advantage" },
-            { "word": "benchmark", "definition": "evaluate or check by comparison with a standard" }
-        ];
+  <div class="progress" id="levelCount"></div>
+  <div class="progress" id="progress"></div>
 
-        console.log("B1 Words:", B1Words);
-        console.log("A2 Words:", A2Words);
-        console.log("Professional Words:", ProfessionalWords);
-    </script>
-</body>
+  <div class="card" id="card" onclick="flipCard()">
+    <div class="card-inner">
+      <div class="card-face front" id="wordFront"></div>
+      <div class="card-face back">
+        <p><strong>Tradução:</strong> <span id="translation"></span></p>
+        <p><strong>Pronúncia:</strong> <span id="pronunciation"></span></p>
+        <p><strong>Exemplo:</strong> <span id="example"></span></p>
+      </div>
+    </div>
+  </div>
 
+  <div class="controls">
+    <button onclick="prevWord()">◀</button>
+    <button onclick="speak()">🔊</button>
+    <button class="star" onclick="toggleDifficult()">⭐</button>
+    <button onclick="nextWord()">▶</button>
+  </div>
+</div>
+
+<script type="module">
+const levelSelect = document.getElementById("levelSelect");
+const modeSelect = document.getElementById("modeSelect");
+const wordFront = document.getElementById("wordFront");
+const translation = document.getElementById("translation");
+const pronunciation = document.getElementById("pronunciation");
+const example = document.getElementById("example");
+const progress = document.getElementById("progress");
+const levelCount = document.getElementById("levelCount");
+const card = document.getElementById("card");
+const starButton = document.querySelector("button.star");
+
+const workWords = [
+  { word: "work", translation: "trabalho", pronunciation: "uârk", example: "I work every day." },
+  { word: "job", translation: "emprego", pronunciation: "djób", example: "I like my job." },
+  { word: "task", translation: "tarefa", pronunciation: "tássk", example: "This task is easy." },
+  { word: "role", translation: "função / papel", pronunciation: "rôul", example: "This is my role." },
+  { word: "responsibility", translation: "responsabilidade", pronunciation: "risponsâbílit", example: "This is my responsibility." },
+  { word: "schedule", translation: "agenda / cronograma", pronunciation: "skédjul", example: "Check the schedule." },
+  { word: "priority", translation: "prioridade", pronunciation: "praióriri", example: "This is a priority." },
+  { word: "meeting", translation: "reunião", pronunciation: "míting", example: "We have a meeting." },
+  { word: "report", translation: "relatório", pronunciation: "ripórt", example: "Send the report." },
+  { word: "performance", translation: "desempenho", pronunciation: "perfólmans", example: "Good performance." },
+  { word: "productivity", translation: "produtividade", pronunciation: "prodâktíviti", example: "Increase productivity." },
+  { word: "procedure", translation: "procedimento", pronunciation: "prossídjur", example: "Follow the procedure." },
+  { word: "inspection", translation: "inspeção", pronunciation: "inspékshan", example: "Final inspection." },
+  { word: "approval", translation: "aprovação", pronunciation: "aprúval", example: "Waiting for approval." },
+  { word: "rejection", translation: "rejeição", pronunciation: "ridjékshan", example: "Product rejection." },
+  { word: "correction", translation: "correção", pronunciation: "korékshan", example: "Make a correction." },
+  { word: "quality", translation: "qualidade", pronunciation: "kuó-lâti", example: "Quality control is essential." },
+  { word: "audit", translation: "auditoria", pronunciation: "ódit", example: "We have an internal audit tomorrow." },
+  { word: "standard", translation: "padrão", pronunciation: "stándârd", example: "Follow the ISO standard." },
+  { word: "process", translation: "processo", pronunciation: "prócés", example: "Document the process steps." },
+  { word: "improvement", translation: "melhoria", pronunciation: "imprúv-mânt", example: "Continuous improvement matters." },
+  { word: "risk", translation: "risco", pronunciation: "rísk", example: "Assess the risk before approving." },
+  { word: "compliance", translation: "conformidade", pronunciation: "kâmpláiâns", example: "Compliance is mandatory." },
+  { word: "deadline", translation: "prazo", pronunciation: "déd-lain", example: "Meet the project deadline." },
+  { word: "milestone", translation: "marco", pronunciation: "máilstoun", example: "We reached a key milestone." },
+  { word: "stakeholder", translation: "parte interessada", pronunciation: "stêik-hóuldâr", example: "Engage every stakeholder." },
+  { word: "efficiency", translation: "eficiência", pronunciation: "ifíshiânsi", example: "Increase operational efficiency." },
+  { word: "specification", translation: "especificação", pronunciation: "spécifikêishân", example: "Review the product specification." },
+  { word: "prototype", translation: "protótipo", pronunciation: "próutôtáip", example: "Build a prototype first." },
+  { word: "engineering", translation: "engenharia", pronunciation: "éndjiníâring", example: "Engineering approved the change." },
+  { word: "reliability", translation: "confiabilidade", pronunciation: "rilaiâbílití", example: "Reliability tests passed." }
+];
+
+const wordsByLevel = {
+  A1: [
+    { word: "about", translation: "sobre", pronunciation: "âbáut", example: "This book is about animals." },
+    { word: "above", translation: "acima", pronunciation: "âbâv", example: "The picture is above the table." },
+    { word: "across", translation: "através", pronunciation: "âkróss", example: "Go across the street." },
+    { word: "act", translation: "agir", pronunciation: "ákt", example: "Please act quickly." },
+    { word: "add", translation: "adicionar", pronunciation: "éd", example: "Add some sugar." },
+    { word: "after", translation: "depois", pronunciation: "áftâr", example: "We eat after work." },
+    { word: "again", translation: "novamente", pronunciation: "âgén", example: "Try again." },
+    { word: "air", translation: "ar", pronunciation: "ér", example: "Fresh air is good." },
+    { word: "all", translation: "todo", pronunciation: "ól", example: "All people are here." },
+    { word: "almost", translation: "quase", pronunciation: "ólmoust", example: "Almost finished." },
+    { word: "always", translation: "sempre", pronunciation: "ólueiz", example: "I always study." },
+    { word: "animal", translation: "animal", pronunciation: "énimâl", example: "The animal runs." },
+    { word: "answer", translation: "resposta", pronunciation: "énsâr", example: "Give an answer." },
+    { word: "any", translation: "qualquer", pronunciation: "éni", example: "Any problem?" },
+    { word: "area", translation: "área", pronunciation: "ériâ", example: "This area is safe." },
+    { word: "ask", translation: "perguntar", pronunciation: "ásk", example: "Ask a question." },
+    { word: "away", translation: "longe", pronunciation: "âwêi", example: "Go away." },
+    { word: "back", translation: "voltar", pronunciation: "bék", example: "Come back." },
+    { word: "bad", translation: "ruim", pronunciation: "béd", example: "Bad weather." },
+    { word: "become", translation: "tornar-se", pronunciation: "bikâm", example: "Become better." },
+    { word: "face", translation: "rosto", pronunciation: "fêis", example: "Ela tem um rosto gentil." },
+    { word: "family", translation: "família", pronunciation: "fémili", example: "Minha família é grande." },
+    { word: "far", translation: "longe", pronunciation: "fár", example: "A escola é longe." },
+    { word: "fast", translation: "rápido", pronunciation: "fést", example: "Um carro rápido." },
+    { word: "father", translation: "pai", pronunciation: "fáder", example: "Meu pai trabalha." },
+    { word: "feel", translation: "sentir", pronunciation: "fíl", example: "Eu me sinto feliz." },
+    { word: "few", translation: "poucos", pronunciation: "fiú", example: "Poucas pessoas vieram." },
+    { word: "find", translation: "encontrar", pronunciation: "fáind", example: "Encontre a chave." },
+    { word: "first", translation: "primeiro", pronunciation: "fârst", example: "First day." },
+    { word: "food", translation: "comida", pronunciation: "fúd", example: "Good food." },
+    { word: "form", translation: "forma / formulário", pronunciation: "fórm", example: "Fill the form." },
+    { word: "friend", translation: "amigo", pronunciation: "frénd", example: "My friend is here." },
+    { word: "full", translation: "cheio", pronunciation: "fúl", example: "The cup is full." },
+    { word: "get", translation: "obter / pegar", pronunciation: "guét", example: "Get some water." },
+    { word: "girl", translation: "menina", pronunciation: "gârl", example: "The girl smiles." },
+    { word: "give", translation: "dar", pronunciation: "guív", example: "Give me help." },
+    { word: "good", translation: "bom", pronunciation: "gúd", example: "Good job." },
+    { word: "group", translation: "grupo", pronunciation: "grúp", example: "A small group." },
+    { word: "grow", translation: "crescer", pronunciation: "grôu", example: "Children grow fast." },
+    { word: "hand", translation: "mão", pronunciation: "rênd", example: "Lave as mãos." },
+    { word: "hard", translation: "difícil / duro", pronunciation: "rárd", example: "Hard work." },
+    { word: "have", translation: "ter", pronunciation: "rév", example: "I have time." }
+  ],
+  A2: [
+    { word: "accept", translation: "aceitar", pronunciation: "âksépt", example: "I accept your offer." },
+    { word: "activity", translation: "atividade", pronunciation: "âktívâti", example: "This activity is fun." },
+    { word: "advise", translation: "aconselhar", pronunciation: "âdváiz", example: "I advise you to rest." },
+    { word: "agree", translation: "concordar", pronunciation: "âgrí", example: "I agree with you." },
+    { word: "allow", translation: "permitir", pronunciation: "âláu", example: "They allow pets." },
+    { word: "angry", translation: "bravo", pronunciation: "éngri", example: "He is angry today." },
+    { word: "arrange", translation: "organizar", pronunciation: "âréindj", example: "Arrange the meeting." },
+    { word: "arrive", translation: "chegar", pronunciation: "âráiv", example: "We arrive early." },
+    { word: "art", translation: "arte", pronunciation: "árt", example: "I like modern art." },
+    { word: "attend", translation: "comparecer", pronunciation: "âténd", example: "Attend the class." },
+    { word: "attention", translation: "atenção", pronunciation: "âténshân", example: "Pay attention." },
+    { word: "available", translation: "disponível", pronunciation: "âvêilâbâl", example: "The room is available." },
+    { word: "average", translation: "média", pronunciation: "ávârâdj", example: "Average price." },
+    { word: "avoid", translation: "evitar", pronunciation: "âvóid", example: "Avoid mistakes." },
+    { word: "balance", translation: "equilíbrio", pronunciation: "bálâns", example: "Work-life balance." },
+    { word: "beauty", translation: "beleza", pronunciation: "biúti", example: "Natural beauty." },
+    { word: "behave", translation: "comportar-se", pronunciation: "bihêiv", example: "Behave well." },
+    { word: "belong", translation: "pertencer", pronunciation: "bilóng", example: "This belongs to me." },
+    { word: "borrow", translation: "emprestar (pegar)", pronunciation: "bórôu", example: "Borrow a book." },
+    { word: "ability", translation: "habilidade", pronunciation: "âbílití", example: "She has the ability to learn fast." },
+    { word: "abroad", translation: "no exterior", pronunciation: "âbród", example: "He works abroad." },
+    { word: "achievement", translation: "conquista", pronunciation: "âchív-mânt", example: "This is an achievement." },
+    { word: "advantage", translation: "vantagem", pronunciation: "âdvántidj", example: "Big advantage." },
+    { word: "adventure", translation: "aventura", pronunciation: "âdvêntchâr", example: "Travel is an adventure." },
+    { word: "agreement", translation: "acordo", pronunciation: "âgríimânt", example: "Sign an agreement." },
+    { word: "announcement", translation: "anúncio", pronunciation: "ânáunsmânt", example: "Important announcement." },
+    { word: "application", translation: "aplicação / candidatura", pronunciation: "âplikêishân", example: "Job application." },
+    { word: "argument", translation: "argumento", pronunciation: "árguiumânt", example: "Strong argument." },
+    { word: "atmosphere", translation: "atmosfera", pronunciation: "átmâsfír", example: "Nice atmosphere." },
+    { word: "background", translation: "histórico / contexto", pronunciation: "bákgráund", example: "Family background." },
+    { word: "behavior", translation: "comportamento", pronunciation: "bihêiviâr", example: "Good behavior." },
+    { word: "beneficial", translation: "benéfico", pronunciation: "bénâfíshâl", example: "Exercise is beneficial." },
+    { word: "celebration", translation: "celebração", pronunciation: "sélâbrêishân", example: "Birthday celebration." },
+    { word: "choice", translation: "escolha", pronunciation: "tchóis", example: "Make a choice." },
+    { word: "communication", translation: "comunicação", pronunciation: "kâmiunikêishân", example: "Good communication." },
+    { word: "competition", translation: "competição", pronunciation: "kómpitishân", example: "Sports competition." }
+  ],
+  B1: [
+    { word: "achieve", translation: "alcançar", pronunciation: "achíiv", example: "She achieved her goals." },
+    { word: "challenge", translation: "desafio", pronunciation: "tchélen dge", example: "This is a difficult challenge." },
+    { word: "experience", translation: "experiência", pronunciation: "ikspíriens", example: "He shared his experience." },
+    { word: "ability", translation: "habilidade", pronunciation: "abíliti", example: "She has the ability to lead." },
+    { word: "advice", translation: "conselho", pronunciation: "adváis", example: "He gave me good advice." },
+    { word: "career", translation: "carreira", pronunciation: "karríer", example: "She wants a career in law." },
+    { word: "community", translation: "comunidade", pronunciation: "komiú-niti", example: "Our community is friendly." },
+    { word: "environment", translation: "meio ambiente", pronunciation: "inváironment", example: "We must protect the environment." },
+    { word: "improve", translation: "melhorar", pronunciation: "imprúv", example: "Practice helps you improve." },
+    { word: "issue", translation: "questão/problema", pronunciation: "íshiu", example: "This is a serious issue." },
+    { word: "purpose", translation: "propósito", pronunciation: "pârpôs", example: "What is the purpose of this?" },
+    { word: "progress", translation: "progresso", pronunciation: "prógress", example: "You made great progress." },
+    { word: "require", translation: "exigir", pronunciation: "ruicwáier", example: "This job requires patience." },
+    { word: "support", translation: "apoio", pronunciation: "supórt", example: "Thank you for your support." },
+    { word: "volunteer", translation: "voluntário", pronunciation: "vólan-tier", example: "She volunteers on weekends." },
+    { word: "adaptation", translation: "adaptação", pronunciation: "âdâptêishân", example: "Cultural adaptation takes time." },
+    { word: "advocate", translation: "defender", pronunciation: "édvâkêt", example: "She advocates education." },
+    { word: "allocate", translation: "alocar", pronunciation: "álâkêit", example: "Allocate resources wisely." },
+    { word: "ambition", translation: "ambição", pronunciation: "âmbíshân", example: "He has ambition." },
+    { word: "analysis", translation: "análise", pronunciation: "ânálâsis", example: "Detailed analysis is needed." },
+    { word: "appreciate", translation: "apreciar", pronunciation: "âpríshieit", example: "I appreciate your help." },
+    { word: "aspect", translation: "aspecto", pronunciation: "áspekt", example: "Consider every aspect." },
+    { word: "assess", translation: "avaliar", pronunciation: "âséss", example: "Assess the risks." },
+    { word: "assure", translation: "assegurar", pronunciation: "âshór", example: "I assure you." },
+    { word: "attain", translation: "atingir", pronunciation: "âtêin", example: "Attain success." },
+    { word: "awareness", translation: "consciência", pronunciation: "âwérnâs", example: "Health awareness." },
+    { word: "benchmark", translation: "referência", pronunciation: "bênchmárk", example: "Industry benchmark." },
+    { word: "capability", translation: "capacidade", pronunciation: "kêipâbílâti", example: "Technical capability." },
+    { word: "clarification", translation: "esclarecimento", pronunciation: "klárâfikêishân", example: "Need clarification." },
+    { word: "collaborate", translation: "colaborar", pronunciation: "kâlábârêit", example: "Collaborate with teams." },
+    { word: "commit", translation: "comprometer", pronunciation: "kâmít", example: "Commit to goals." },
+    { word: "comply", translation: "cumprir", pronunciation: "kâmplái", example: "Comply with rules." },
+    { word: "initiative", translation: "iniciativa", pronunciation: "iníshâtīv", example: "She showed initiative at work." },
+    { word: "insist", translation: "insistir", pronunciation: "insíst", example: "He insists on going." },
+    { word: "interpret", translation: "interpretar", pronunciation: "intârpʳét", example: "Interpret the data." },
+    { word: "invest", translation: "investir", pronunciation: "invést", example: "Invest in education." },
+    { word: "involve", translation: "envolver", pronunciation: "invólv", example: "This involves teamwork." },
+    { word: "issue", translation: "questão / problema", pronunciation: "íshu", example: "We solved the issue." },
+    { word: "justify", translation: "justificar", pronunciation: "djâstâfái", example: "Justify your answer." },
+    { word: "label", translation: "rótulo / rotular", pronunciation: "lêibâl", example: "Label the boxes." },
+    { word: "lack", translation: "falta / faltar", pronunciation: "lák", example: "Lack of time." },
+    { word: "launch", translation: "lançar", pronunciation: "lónch", example: "Launch a project." },
+    { word: "limit", translation: "limite", pronunciation: "límit", example: "There is a limit." },
+    { word: "link", translation: "ligar / vínculo", pronunciation: "línk", example: "Link the files." },
+    { word: "manage", translation: "gerenciar", pronunciation: "ménâdj", example: "Manage the team." },
+    { word: "measure", translation: "medida / medir", pronunciation: "méjâr", example: "Measure success." },
+    { word: "method", translation: "método", pronunciation: "méthâd", example: "Choose a method." },
+    { word: "monitor", translation: "monitorar", pronunciation: "mónitâr", example: "Monitor progress." },
+    { word: "motivate", translation: "motivar", pronunciation: "môtivêit", example: "Motivate students." },
+    { word: "negotiate", translation: "negociar", pronunciation: "nigôushieit", example: "Negotiate prices." }
+  ],
+  B2: [
+    { word: "approach", translation: "abordagem", pronunciation: "aprôutch", example: "We need a new approach." },
+    { word: "assume", translation: "assumir", pronunciation: "assúm", example: "Don't assume the result." },
+    { word: "awareness", translation: "consciência", pronunciation: "auérness", example: "They raised awareness about recycling." },
+    { word: "circumstance", translation: "circunstância", pronunciation: "sârcum-stans", example: "Under these circumstances we must wait." },
+    { word: "commitment", translation: "compromisso", pronunciation: "comítment", example: "Her commitment is impressive." },
+    { word: "consequence", translation: "consequência", pronunciation: "kónse-kuens", example: "Every action has a consequence." },
+    { word: "despite", translation: "apesar de", pronunciation: "dispáit", example: "Despite the rain, we went out." },
+    { word: "estimate", translation: "estimativa", pronunciation: "éstimêt", example: "Can you estimate the cost?" },
+    { word: "feature", translation: "característica", pronunciation: "fítchar", example: "This phone has a new feature." },
+    { word: "maintain", translation: "manter", pronunciation: "meintêin", example: "It's hard to maintain focus." },
+    { word: "priority", translation: "prioridade", pronunciation: "praiôrâti", example: "Safety is our priority." },
+    { word: "reliable", translation: "confiável", pronunciation: "riláiâbol", example: "He is a reliable coworker." },
+    { word: "significant", translation: "significativo", pronunciation: "signífécant", example: "There was a significant change." },
+    { word: "strategy", translation: "estratégia", pronunciation: "strátédi", example: "We discussed the new strategy." },
+    { word: "sustainable", translation: "sustentável", pronunciation: "sustêinabol", example: "We need sustainable energy." },
+    { word: "trend", translation: "tendência", pronunciation: "trénd", example: "This is a global trend." },
+    { word: "insight", translation: "percepção / insight", pronunciation: "ínsait", example: "The report provides useful insight." },
+    { word: "integrity", translation: "integridade", pronunciation: "intégrâti", example: "Integrity is essential in leadership." },
+    { word: "interpret", translation: "interpretar", pronunciation: "intârprêt", example: "Interpret the results carefully." },
+    { word: "intervene", translation: "intervir", pronunciation: "intârvín", example: "The manager intervened." },
+    { word: "intrinsic", translation: "intrínseco", pronunciation: "intrínsik", example: "Intrinsic motivation matters." },
+    { word: "invoke", translation: "invocar", pronunciation: "invôuk", example: "Invoke the law." },
+    { word: "justify", translation: "justificar", pronunciation: "djâstâfái", example: "Justify your decision." },
+    { word: "leverage", translation: "alavancar", pronunciation: "lêvârâdj", example: "Leverage experience." },
+    { word: "likelihood", translation: "probabilidade", pronunciation: "láiklihud", example: "High likelihood of success." },
+    { word: "magnitude", translation: "magnitude", pronunciation: "mágnih-túd", example: "The magnitude is large." },
+    { word: "mandatory", translation: "obrigatório", pronunciation: "mándâtóri", example: "Training is mandatory." },
+    { word: "manifest", translation: "manifestar", pronunciation: "mánifêst", example: "Problems manifest quickly." },
+    { word: "mediator", translation: "mediador", pronunciation: "mídiêitâr", example: "A mediator resolved the conflict." },
+    { word: "mitigate", translation: "mitigar", pronunciation: "mítigêit", example: "Mitigate the risks." },
+    { word: "notion", translation: "noção", pronunciation: "nôushân", example: "Basic notion of law." },
+    { word: "objective", translation: "objetivo", pronunciation: "âbdjéktiv", example: "The objective is clear." },
+    { word: "accumulate", translation: "acumular", pronunciation: "âkiúmiulêit", example: "Accumulate experience over time." },
+    { word: "advancement", translation: "avanço", pronunciation: "âdvánsmânt", example: "Career advancement matters." },
+    { word: "align", translation: "alinhar", pronunciation: "âláign", example: "Align goals with strategy." },
+    { word: "allocate", translation: "alocar", pronunciation: "álâkêit", example: "Allocate budget carefully." },
+    { word: "ambivalent", translation: "ambivalente", pronunciation: "âmbívâlânt", example: "Ambivalent feelings." },
+    { word: "amplify", translation: "amplificar", pronunciation: "ámplifái", example: "Amplify the message." },
+    { word: "anticipatory", translation: "antecipatório", pronunciation: "ântísipâtóri", example: "Anticipatory planning helps." },
+    { word: "assertive", translation: "assertivo", pronunciation: "âsârtiv", example: "Be assertive, not aggressive." },
+    { word: "attainment", translation: "atingimento", pronunciation: "âtêinmânt", example: "Goal attainment." },
+    { word: "augment", translation: "aumentar", pronunciation: "ôugmént", example: "Augment resources." },
+    { word: "benchmarking", translation: "benchmarking", pronunciation: "bênchmárking", example: "Benchmarking improves quality." },
+    { word: "calibrate", translation: "calibrar", pronunciation: "kálibrêit", example: "Calibrate the equipment." },
+    { word: "capability", translation: "capacidade", pronunciation: "kêipâbílâti", example: "Technical capability." },
+    { word: "clarity", translation: "clareza", pronunciation: "klárâti", example: "Clarity is essential." },
+    { word: "coexist", translation: "coexistir", pronunciation: "kôuigzíist", example: "Different views coexist." },
+    { word: "collaborative", translation: "colaborativo", pronunciation: "kâlábârêtiv", example: "Collaborative effort." },
+    { word: "complement", translation: "complementar", pronunciation: "kómplimênt", example: "Complement the proposal with data." }
+  ]
+};
+
+const savedState = JSON.parse(localStorage.getItem("flashcardState") || "{}");
+let positions = savedState.positions ?? {};
+let difficult = savedState.difficult ?? {};
+let reviewState = savedState.reviewState ?? null;
+let currentMode = savedState.mode ?? "levels";
+
+let currentLevel = levelSelect.value;
+if (savedState.level && wordsByLevel[savedState.level]) {
+  currentLevel = savedState.level;
+  levelSelect.value = currentLevel;
+}
+
+let currentIndex = positions[currentLevel] ?? 0;
+
+if (!["levels", "review", "work"].includes(currentMode)) currentMode = "levels";
+document.getElementById("modeSelect").value = currentMode;
+levelSelect.style.display = currentMode === "levels" ? "block" : "none";
+if (currentMode !== "levels") {
+  currentIndex = positions[currentMode] ?? 0;
+}
+
+function persist() {
+  localStorage.setItem(
+    "flashcardState",
+    JSON.stringify({ level: currentLevel, positions, difficult, mode: currentMode, reviewState })
+  );
+}
+
+function getWords() {
+  if (currentMode === "review") return getReviewDeck();
+  if (currentMode === "work") return workWords;
+  return wordsByLevel[currentLevel];
+}
+
+function getCurrentWord() {
+  const list = getWords();
+  if (!list.length) return null;
+  if (currentIndex >= list.length) currentIndex = 0;
+  return list[currentIndex];
+}
+
+function updateProgress() {
+  const total = getWords().length;
+  if (currentMode === "review") {
+    levelCount.textContent = `${total} cartões de revisão (difíceis, máx. 10/dia)`;
+  } else if (currentMode === "work") {
+    levelCount.textContent = `${total} cartões - Área de Trabalho`;
+  } else {
+    levelCount.textContent = `${total} palavras no nível ${currentLevel}`;
+  }
+  progress.textContent = total ? `Carta ${currentIndex + 1} de ${total}` : "Nenhum cartão disponível";
+}
+
+function isDifficult(wordText) {
+  const set = difficult[currentLevel] ?? [];
+  return set.includes(wordText);
+}
+
+function renderCard() {
+  const word = getCurrentWord();
+  if (!word) return;
+  wordFront.textContent = word.word;
+  translation.textContent = word.translation;
+  pronunciation.textContent = word.pronunciation;
+  example.textContent = word.example;
+  starButton.disabled = currentMode !== "levels";
+  starButton.classList.toggle("active", currentMode === "levels" && isDifficult(word.word));
+  updateProgress();
+}
+
+function resetFlip() {
+  card.classList.remove("flip");
+}
+
+function nextWord() {
+  const total = getWords().length;
+  if (!total) return;
+  currentIndex = (currentIndex + 1) % total;
+  positions[getPositionKey()] = currentIndex;
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function prevWord() {
+  const total = getWords().length;
+  if (!total) return;
+  currentIndex = (currentIndex - 1 + total) % total;
+  positions[getPositionKey()] = currentIndex;
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function speak() {
+  const word = getCurrentWord();
+  if (!word || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(word.word);
+  utterance.lang = "en-US";
+  speechSynthesis.speak(utterance);
+}
+
+function toggleDifficult() {
+  const word = getCurrentWord();
+  if (!word) return;
+  if (currentMode !== "levels") return;
+  const list = difficult[currentLevel] ?? [];
+  const index = list.indexOf(word.word);
+  if (index >= 0) {
+    list.splice(index, 1);
+  } else {
+    list.push(word.word);
+  }
+  difficult[currentLevel] = list;
+  persist();
+  renderCard();
+}
+
+function changeLevel() {
+  currentLevel = levelSelect.value;
+  const total = getWords().length;
+  currentIndex = positions[getPositionKey()] ?? 0;
+  if (currentIndex >= total) currentIndex = 0;
+  positions[getPositionKey()] = currentIndex;
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function changeMode() {
+  currentMode = modeSelect.value;
+  levelSelect.style.display = currentMode === "levels" ? "block" : "none";
+  if (currentMode === "levels") {
+    currentIndex = positions[currentLevel] ?? 0;
+  } else {
+    currentIndex = positions[getPositionKey()] ?? 0;
+  }
+  persist();
+  resetFlip();
+  renderCard();
+}
+
+function getPositionKey() {
+  return currentMode === "levels" ? currentLevel : currentMode;
+}
+
+function findWord(level, wordText) {
+  const list = wordsByLevel[level] ?? [];
+  return list.find((w) => w.word === wordText);
+}
+
+function getReviewDeck() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (reviewState?.date === today && Array.isArray(reviewState.items)) {
+    return reviewState.items
+      .map((item) => findWord(item.level, item.word))
+      .filter(Boolean);
+  }
+
+  const gathered = [];
+  Object.keys(difficult).forEach((level) => {
+    (difficult[level] ?? []).forEach((wordText) => {
+      const match = findWord(level, wordText);
+      if (match) gathered.push({ level, word: wordText });
+    });
+  });
+
+  const seen = new Set();
+  const unique = [];
+  for (const entry of gathered) {
+    const key = `${entry.level}|${entry.word}`;
+    if (!seen.has(key)) {
+      unique.push(entry);
+      seen.add(key);
+    }
+  }
+
+  const limited = unique.slice(0, 10);
+  reviewState = { date: today, items: limited };
+  persist();
+  return limited.map((item) => findWord(item.level, item.word)).filter(Boolean);
+}
+
+function flipCard() {
+  card.classList.toggle("flip");
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowRight") {
+    nextWord();
+  } else if (event.key === "ArrowLeft") {
+    prevWord();
+  } else if (event.key === " ") {
+    event.preventDefault();
+    flipCard();
+  }
+});
+
+renderCard();
+
+window.nextWord = nextWord;
+window.prevWord = prevWord;
+window.flipCard = flipCard;
+window.changeLevel = changeLevel;
+window.toggleDifficult = toggleDifficult;
+window.speak = speak;
+window.changeMode = changeMode;
+</script>
+  </body>
 </html>
